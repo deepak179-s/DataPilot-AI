@@ -329,3 +329,122 @@ else:
                     st.session_state.df = df.dropna()
                     after = len(st.session_state.df)
                     st.session_state.cleaning_log.append(f"Dropped {before-after} rows with missing values")
+                else:
+                    for col in df.columns:
+                        if df[col].isnull().sum() > 0:
+                            if pd.api.types.is_numeric_dtype(df[col]):
+                                val = df[col].mean() if strategy == "Mean" else (df[col].median() if strategy == "Median" else df[col].mode()[0])
+                                df[col].fillna(val, inplace=True)
+                            else:
+                                df[col].fillna(df[col].mode()[0], inplace=True)
+                    st.session_state.df = df
+                    st.session_state.cleaning_log.append(f"Imputed missing values using {strategy}")
+                st.success("Done!")
+                st.rerun()
+                
+        with cl2:
+            st.subheader("Duplicates")
+            st.write(f"**{df.duplicated().sum()}** duplicate rows found")
+            if st.button("Remove Duplicates", use_container_width=True):
+                before = len(df)
+                st.session_state.df = df.drop_duplicates()
+                removed = before - len(st.session_state.df)
+                st.session_state.cleaning_log.append(f"Removed {removed} duplicate rows")
+                st.success(f"Removed {removed} duplicates!")
+                st.rerun()
+
+        with cl3:
+            st.subheader("Outlier Treatment")
+            outlier_col = st.selectbox("Column", num_cols_list, key="outlier_col")
+            outlier_method = st.selectbox("Method", ["IQR Capping", "Z-Score Removal"])
+            if st.button("Treat Outliers", use_container_width=True):
+                if outlier_method == "IQR Capping":
+                    Q1 = df[outlier_col].quantile(0.25)
+                    Q3 = df[outlier_col].quantile(0.75)
+                    IQR = Q3 - Q1
+                    df[outlier_col] = df[outlier_col].clip(Q1 - 1.5*IQR, Q3 + 1.5*IQR)
+                else:
+                    z = np.abs(stats.zscore(df[outlier_col].dropna()))
+                    mask = z < 3
+                    df = df.loc[df[outlier_col].dropna().index[mask]]
+                st.session_state.df = df
+                st.session_state.cleaning_log.append(f"Outlier treatment ({outlier_method}) on {outlier_col}")
+                st.success("Outliers treated!")
+                st.rerun()
+
+        # Audit Trail (Section 12)
+        if st.session_state.cleaning_log:
+            st.subheader("🔍 Cleaning Audit Trail")
+            for i, log in enumerate(st.session_state.cleaning_log, 1):
+                st.write(f"{i}. {log}")
+
+    # ═══════════════════════════════════
+    # TAB 3: EDA & AUTO-CHARTS (Sections 13-15)
+    # ═══════════════════════════════════
+    with tabs[2]:
+        st.header("Exploratory Data Analysis")
+        
+        # Descriptive Stats (Section 13)
+        st.subheader("📊 Descriptive Statistics")
+        desc = df.describe(include='all').T
+        if 'mean' in desc.columns:
+            for stat_col in ['mean', 'std', 'min', 'max']:
+                if stat_col in desc.columns:
+                    desc[stat_col] = desc[stat_col].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
+        st.dataframe(desc.astype(str), use_container_width=True)
+        
+        # Additional Stats: Skewness & Kurtosis (Section 13)
+        if len(num_cols_list) > 0:
+            st.subheader("📐 Distribution Shape (Skewness & Kurtosis)")
+            shape_data = pd.DataFrame({
+                'Column': num_cols_list,
+                'Skewness': [df[c].skew() for c in num_cols_list],
+                'Kurtosis': [df[c].kurtosis() for c in num_cols_list],
+                'Interpretation': [
+                    "Highly Skewed" if abs(df[c].skew()) > 1 else "Moderately Skewed" if abs(df[c].skew()) > 0.5 else "Approximately Normal"
+                    for c in num_cols_list
+                ]
+            })
+            st.dataframe(shape_data, use_container_width=True, hide_index=True)
+        
+        # Auto-Charts (Section 14)
+        st.subheader("📈 Automated Visualizations")
+        st.write("Charts are automatically selected based on your column data type and distribution.")
+        
+        chart_col = st.selectbox("Select Column to Visualize", df.columns, key="eda_chart_col")
+        chart_type = auto_select_chart(df[chart_col], chart_col)
+        
+        ecol1, ecol2 = st.columns(2)
+        with ecol1:
+            if pd.api.types.is_numeric_dtype(df[chart_col]):
+                st.plotly_chart(px.histogram(df, x=chart_col, marginal="box",
+                    title=f"Distribution of {chart_col}",
+                    color_discrete_sequence=["#818cf8"]), use_container_width=True)
+            else:
+                vc = df[chart_col].value_counts().head(20).reset_index()
+                vc.columns = [chart_col, 'count']
+                st.plotly_chart(px.bar(vc, x=chart_col, y='count',
+                    title=f"Frequency of {chart_col}",
+                    color_discrete_sequence=["#38bdf8"]), use_container_width=True)
+        with ecol2:
+            if pd.api.types.is_numeric_dtype(df[chart_col]):
+                st.plotly_chart(px.box(df, y=chart_col, title=f"Box Plot — {chart_col}",
+                    color_discrete_sequence=["#34d399"]), use_container_width=True)
+            else:
+                vc = df[chart_col].value_counts().head(10).reset_index()
+                vc.columns = [chart_col, 'count']
+                st.plotly_chart(px.pie(vc, names=chart_col, values='count',
+                    title=f"Pie Chart — {chart_col}"), use_container_width=True)
+        
+        # Smart Insight for Column (Section 15)
+        st.markdown(f"""<div class='insight-card'>
+            <strong>💡 AI Insight for <code>{chart_col}</code>:</strong><br>
+            {"This column has <b>" + str(df[chart_col].isnull().sum()) + "</b> missing values. " if df[chart_col].isnull().sum() > 0 else ""}
+            {"It is <b>highly right-skewed</b> (skew=" + f"{df[chart_col].skew():.2f}" + "), suggesting a concentration of lower values with a long right tail. Consider a log transformation." if pd.api.types.is_numeric_dtype(df[chart_col]) and df[chart_col].skew() > 1 else ""}
+            {"It is <b>highly left-skewed</b> (skew=" + f"{df[chart_col].skew():.2f}" + ")." if pd.api.types.is_numeric_dtype(df[chart_col]) and df[chart_col].skew() < -1 else ""}
+            {"It follows an <b>approximately normal distribution</b>." if pd.api.types.is_numeric_dtype(df[chart_col]) and abs(df[chart_col].skew()) <= 0.5 else ""}
+            {"The dominant category is '<b>" + str(df[chart_col].mode()[0]) + "</b>' appearing " + str(df[chart_col].value_counts().iloc[0]) + " times." if not pd.api.types.is_numeric_dtype(df[chart_col]) else ""}
+        </div>""", unsafe_allow_html=True)
+        
+        # Correlation Heatmap (Section 14)
+        if len(num_cols_list) >= 2:
