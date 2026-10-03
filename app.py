@@ -448,3 +448,148 @@ else:
         
         # Correlation Heatmap (Section 14)
         if len(num_cols_list) >= 2:
+            st.subheader("🔥 Correlation Heatmap")
+            corr = df[num_cols_list].corr()
+            fig = px.imshow(corr, text_auto=".2f", color_continuous_scale="RdBu_r",
+                title="Feature Correlation Matrix", aspect="auto")
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Strong correlations insight
+            strong = []
+            for i in range(len(corr.columns)):
+                for j in range(i+1, len(corr.columns)):
+                    val = corr.iloc[i, j]
+                    if abs(val) > 0.7:
+                        strong.append(f"**{corr.columns[i]}** ↔ **{corr.columns[j]}**: {val:.2f}")
+            if strong:
+                st.markdown(f"""<div class='insight-card'>
+                    <strong>💡 Strong Correlations Detected:</strong><br>
+                    {"<br>".join(strong)}
+                </div>""", unsafe_allow_html=True)
+        
+        # Scatter Matrix for selected numerics
+        if len(num_cols_list) >= 2:
+            st.subheader("🔗 Pairwise Scatter Plots")
+            scatter_cols = st.multiselect("Select columns (max 5)", num_cols_list, default=num_cols_list[:min(3, len(num_cols_list))], key="scatter_multi")
+            if len(scatter_cols) >= 2:
+                fig = px.scatter_matrix(df[scatter_cols[:5]], dimensions=scatter_cols[:5],
+                    color_discrete_sequence=["#818cf8"], title="Scatter Matrix")
+                fig.update_layout(height=600)
+                st.plotly_chart(fig, use_container_width=True)
+
+    # ═══════════════════════════════════
+    # TAB 4: STATISTICAL TESTS (Section 16)
+    # ═══════════════════════════════════
+    with tabs[3]:
+        st.header("Statistical Hypothesis Testing")
+        
+        test_type = st.selectbox("Select Test", [
+            "Independent T-Test", "Paired T-Test", "ANOVA (One-Way)",
+            "Mann-Whitney U", "Kruskal-Wallis",
+            "Pearson Correlation", "Spearman Correlation",
+            "Chi-Square Test", "Shapiro-Wilk (Normality)"
+        ])
+        
+        num_cols = df.select_dtypes(include=np.number).columns.tolist()
+        cat_cols = df.select_dtypes(exclude=np.number).columns.tolist()
+        
+        if test_type == "Independent T-Test":
+            if cat_cols and num_cols:
+                cat = st.selectbox("Grouping Variable (Binary)", cat_cols, key="tt_cat")
+                num = st.selectbox("Measurement Variable", num_cols, key="tt_num")
+                if st.button("Run T-Test"):
+                    groups = df[cat].dropna().unique()
+                    if len(groups) == 2:
+                        g1 = df[df[cat]==groups[0]][num].dropna()
+                        g2 = df[df[cat]==groups[1]][num].dropna()
+                        t_stat, p_val = stats.ttest_ind(g1, g2)
+                        
+                        r1, r2 = st.columns(2)
+                        r1.metric("T-Statistic", f"{t_stat:.4f}")
+                        r2.metric("P-Value", f"{p_val:.4e}")
+                        
+                        # Effect size (Cohen's d)
+                        d = (g1.mean() - g2.mean()) / np.sqrt((g1.std()**2 + g2.std()**2) / 2)
+                        st.metric("Cohen's d (Effect Size)", f"{d:.3f}")
+                        
+                        if p_val < 0.05:
+                            st.success(f"✅ Statistically significant (p < 0.05). There IS a meaningful difference between '{groups[0]}' and '{groups[1]}'.")
+                        else:
+                            st.warning(f"⚠️ Not significant (p ≥ 0.05). No meaningful difference found.")
+                        
+                        fig = px.box(df, x=cat, y=num, color=cat, title=f"{num} by {cat}",
+                            color_discrete_sequence=["#818cf8", "#f87171"])
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("T-Test requires exactly 2 groups. Use ANOVA for 3+ groups.")
+        
+        elif test_type == "ANOVA (One-Way)":
+            if cat_cols and num_cols:
+                cat = st.selectbox("Grouping Variable", cat_cols, key="anova_cat")
+                num = st.selectbox("Measurement Variable", num_cols, key="anova_num")
+                if st.button("Run ANOVA"):
+                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat)]
+                    if len(groups_data) >= 2:
+                        f_stat, p_val = stats.f_oneway(*groups_data)
+                        r1, r2 = st.columns(2)
+                        r1.metric("F-Statistic", f"{f_stat:.4f}")
+                        r2.metric("P-Value", f"{p_val:.4e}")
+                        if p_val < 0.05:
+                            st.success("✅ Significant difference across groups (p < 0.05).")
+                        else:
+                            st.warning("⚠️ No significant difference found.")
+                        fig = px.box(df, x=cat, y=num, color=cat, title=f"ANOVA: {num} by {cat}")
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+        elif test_type == "Pearson Correlation":
+            if len(num_cols) >= 2:
+                v1 = st.selectbox("Variable 1", num_cols, key="p_v1")
+                v2 = st.selectbox("Variable 2", num_cols, index=1, key="p_v2")
+                if st.button("Compute Pearson"):
+                    r, p = stats.pearsonr(df[v1].dropna(), df[v2].dropna())
+                    c1, c2 = st.columns(2)
+                    c1.metric("Pearson r", f"{r:.4f}")
+                    c2.metric("P-Value", f"{p:.4e}")
+                    fig = px.scatter(df, x=v1, y=v2, trendline="ols", title=f"Scatter: {v1} vs {v2}",
+                        color_discrete_sequence=["#818cf8"])
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+        elif test_type == "Spearman Correlation":
+            if len(num_cols) >= 2:
+                v1 = st.selectbox("Variable 1", num_cols, key="s_v1")
+                v2 = st.selectbox("Variable 2", num_cols, index=1, key="s_v2")
+                if st.button("Compute Spearman"):
+                    r, p = stats.spearmanr(df[v1].dropna(), df[v2].dropna())
+                    c1, c2 = st.columns(2)
+                    c1.metric("Spearman ρ", f"{r:.4f}")
+                    c2.metric("P-Value", f"{p:.4e}")
+        
+        elif test_type == "Chi-Square Test":
+            if len(cat_cols) >= 2:
+                v1 = st.selectbox("Variable 1", cat_cols, key="chi_v1")
+                v2 = st.selectbox("Variable 2", cat_cols, index=min(1, len(cat_cols)-1), key="chi_v2")
+                if st.button("Run Chi-Square"):
+                    ct = pd.crosstab(df[v1], df[v2])
+                    chi2, p, dof, expected = stats.chi2_contingency(ct)
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Chi² Statistic", f"{chi2:.4f}")
+                    c2.metric("P-Value", f"{p:.4e}")
+                    c3.metric("Degrees of Freedom", dof)
+                    if p < 0.05:
+                        st.success("✅ Variables are significantly associated.")
+                    else:
+                        st.warning("⚠️ No significant association.")
+                        
+        elif test_type == "Shapiro-Wilk (Normality)":
+            if num_cols:
+                col = st.selectbox("Column", num_cols, key="shapiro_col")
+                if st.button("Run Shapiro-Wilk"):
+                    sample = df[col].dropna()
+                    if len(sample) > 5000:
+                        sample = sample.sample(5000, random_state=42)
+                    stat, p = stats.shapiro(sample)
+                    c1, c2 = st.columns(2)
+                    c1.metric("W-Statistic", f"{stat:.4f}")
+                    c2.metric("P-Value", f"{p:.4e}")
+                    if p > 0.05:
