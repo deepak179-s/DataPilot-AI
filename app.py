@@ -593,3 +593,342 @@ else:
                     c1.metric("W-Statistic", f"{stat:.4f}")
                     c2.metric("P-Value", f"{p:.4e}")
                     if p > 0.05:
+                        st.success(f"✅ {col} appears normally distributed (p > 0.05).")
+                    else:
+                        st.warning(f"⚠️ {col} is NOT normally distributed (p < 0.05).")
+                    fig = px.histogram(df, x=col, marginal="violin", title=f"Distribution: {col}",
+                        color_discrete_sequence=["#818cf8"])
+                    st.plotly_chart(fig, use_container_width=True)
+
+        elif test_type == "Mann-Whitney U":
+            if cat_cols and num_cols:
+                cat = st.selectbox("Grouping Variable (Binary)", cat_cols, key="mw_cat")
+                num = st.selectbox("Measurement Variable", num_cols, key="mw_num")
+                if st.button("Run Mann-Whitney"):
+                    groups = df[cat].dropna().unique()
+                    if len(groups) == 2:
+                        g1 = df[df[cat]==groups[0]][num].dropna()
+                        g2 = df[df[cat]==groups[1]][num].dropna()
+                        u, p = stats.mannwhitneyu(g1, g2, alternative='two-sided')
+                        c1, c2 = st.columns(2)
+                        c1.metric("U-Statistic", f"{u:.1f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        if p < 0.05:
+                            st.success("✅ Significant difference between groups.")
+                        else:
+                            st.warning("⚠️ No significant difference found.")
+
+        elif test_type == "Kruskal-Wallis":
+            if cat_cols and num_cols:
+                cat = st.selectbox("Grouping Variable", cat_cols, key="kw_cat")
+                num = st.selectbox("Measurement Variable", num_cols, key="kw_num")
+                if st.button("Run Kruskal-Wallis"):
+                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat)]
+                    if len(groups_data) >= 2:
+                        h, p = stats.kruskal(*groups_data)
+                        c1, c2 = st.columns(2)
+                        c1.metric("H-Statistic", f"{h:.4f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        if p < 0.05:
+                            st.success("✅ Significant difference across groups.")
+                        else:
+                            st.warning("⚠️ No significant difference found.")
+
+        elif test_type == "Paired T-Test":
+            if len(num_cols) >= 2:
+                v1 = st.selectbox("Before/Group 1", num_cols, key="pt_v1")
+                v2 = st.selectbox("After/Group 2", num_cols, index=1, key="pt_v2")
+                if st.button("Run Paired T-Test"):
+                    clean = df[[v1, v2]].dropna()
+                    t, p = stats.ttest_rel(clean[v1], clean[v2])
+                    c1, c2 = st.columns(2)
+                    c1.metric("T-Statistic", f"{t:.4f}")
+                    c2.metric("P-Value", f"{p:.4e}")
+                    if p < 0.05:
+                        st.success("✅ Significant difference between paired measurements.")
+                    else:
+                        st.warning("⚠️ No significant difference.")
+
+    # ═══════════════════════════════════
+    # TAB 5: AUTOML & LEADERBOARD (Sections 17-23)
+    # ═══════════════════════════════════
+    with tabs[4]:
+        st.header("AutoML — Multi-Model Training & Evaluation")
+        
+        # Target suggestion (Section 17)
+        suggested = suggest_target(df)
+        target = st.selectbox("🎯 Target Variable", df.columns,
+            index=list(df.columns).index(suggested) if suggested in df.columns else 0)
+        
+        feature_cols = [c for c in df.columns if c != target]
+        features = st.multiselect("Features (leave empty for all)", feature_cols, key="automl_feats")
+        if not features:
+            features = feature_cols
+        
+        # Auto-detect problem type (Section 18)
+        problem_type = detect_problem_type(df[target])
+        problem_override = st.radio("Problem Type", ["Classification", "Regression"],
+            index=0 if problem_type == 'classification' else 1, horizontal=True)
+        is_class = problem_override == "Classification"
+        
+        cv_folds = st.slider("Cross-Validation Folds", 2, 10, 5)
+        
+        if st.button("🚀 Train All Models", use_container_width=True):
+            with st.spinner("Training multiple models with cross-validation..."):
+                ml_df = df[features + [target]].dropna()
+                if len(ml_df) > 10:
+                    X = ml_df[features].copy()
+                    y = ml_df[target].copy()
+                    
+                    # Encode categoricals
+                    label_encoders = {}
+                    for col in X.columns:
+                        if not pd.api.types.is_numeric_dtype(X[col]):
+                            le = LabelEncoder()
+                            X[col] = le.fit_transform(X[col].astype(str))
+                            label_encoders[col] = le
+                    X = X.apply(pd.to_numeric)
+                    
+                    target_le = None
+                    if is_class:
+                        target_le = LabelEncoder()
+                        y = target_le.fit_transform(y.astype(str))
+                    
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                    
+                    # Models (Section 20)
+                    if is_class:
+                        models = {
+                            "Logistic Regression": LogisticRegression(max_iter=500, random_state=42),
+                            "KNN": KNeighborsClassifier(),
+                            "Decision Tree": DecisionTreeClassifier(random_state=42),
+                            "Random Forest": RandomForestClassifier(random_state=42),
+                            "Gradient Boosting": GradientBoostingClassifier(random_state=42),
+                        }
+                        if HAS_XGB:
+                            models["XGBoost"] = xgb.XGBClassifier(random_state=42, eval_metric='logloss', verbosity=0)
+                        scoring = 'accuracy'
+                    else:
+                        models = {
+                            "Linear Regression": LinearRegression(),
+                            "Ridge": Ridge(random_state=42),
+                            "Lasso": Lasso(random_state=42),
+                            "Decision Tree": DecisionTreeRegressor(random_state=42),
+                            "Random Forest": RandomForestRegressor(random_state=42),
+                            "Gradient Boosting": GradientBoostingRegressor(random_state=42),
+                        }
+                        if HAS_XGB:
+                            models["XGBoost"] = xgb.XGBRegressor(random_state=42, verbosity=0)
+                        scoring = 'r2'
+                    
+                    # Train & Evaluate (Section 21-22)
+                    results = []
+                    best_score = -np.inf
+                    best_model = None
+                    best_name = ""
+                    
+                    progress = st.progress(0)
+                    for i, (name, model) in enumerate(models.items()):
+                        try:
+                            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, scoring=scoring)
+                            model.fit(X_train, y_train)
+                            preds = model.predict(X_test)
+                            
+                            if is_class:
+                                acc = accuracy_score(y_test, preds)
+                                prec = precision_score(y_test, preds, average='weighted', zero_division=0)
+                                rec = recall_score(y_test, preds, average='weighted', zero_division=0)
+                                f1 = f1_score(y_test, preds, average='weighted', zero_division=0)
+                                results.append({
+                                    "Model": name, "Accuracy": f"{acc:.4f}",
+                                    "Precision": f"{prec:.4f}", "Recall": f"{rec:.4f}",
+                                    "F1-Score": f"{f1:.4f}",
+                                    "CV Mean": f"{cv_scores.mean():.4f}", "CV Std": f"{cv_scores.std():.4f}",
+                                    "_score": acc
+                                })
+                            else:
+                                r2 = r2_score(y_test, preds)
+                                mae = mean_absolute_error(y_test, preds)
+                                rmse = np.sqrt(mean_squared_error(y_test, preds))
+                                results.append({
+                                    "Model": name, "R²": f"{r2:.4f}",
+                                    "MAE": f"{mae:.4f}", "RMSE": f"{rmse:.4f}",
+                                    "CV Mean": f"{cv_scores.mean():.4f}", "CV Std": f"{cv_scores.std():.4f}",
+                                    "_score": r2
+                                })
+                            
+                            if results[-1]["_score"] > best_score:
+                                best_score = results[-1]["_score"]
+                                best_model = model
+                                best_name = name
+                        except Exception as e:
+                            st.warning(f"⚠️ {name} failed: {e}")
+                        
+                        progress.progress((i + 1) / len(models))
+                    
+                    # Leaderboard
+                    if results:
+                        st.subheader("🏆 Model Leaderboard")
+                        lb = pd.DataFrame(results).sort_values("_score", ascending=False).drop("_score", axis=1)
+                        st.dataframe(lb, use_container_width=True, hide_index=True)
+                        
+                        st.success(f"🥇 **Best Model: {best_name}** — {'Accuracy' if is_class else 'R²'}: {best_score:.4f}")
+                        
+                        # Save best model
+                        st.session_state.trained_model = best_model
+                        st.session_state.model_info = {
+                            "name": best_name, "features": features,
+                            "label_encoders": label_encoders, "target_le": target_le,
+                            "target": target, "is_class": is_class,
+                            "X_test": X_test, "y_test": y_test
+                        }
+                        
+                        # Confusion Matrix / Residuals (Section 21)
+                        preds = best_model.predict(X_test)
+                        if is_class:
+                            cm_col1, cm_col2 = st.columns(2)
+                            with cm_col1:
+                                st.subheader("Confusion Matrix")
+                                cm = confusion_matrix(y_test, preds)
+                                fig = px.imshow(cm, text_auto=True, color_continuous_scale="Blues",
+                                    title=f"Confusion Matrix — {best_name}")
+                                st.plotly_chart(fig, use_container_width=True)
+                            with cm_col2:
+                                # ROC Curve
+                                try:
+                                    if hasattr(best_model, 'predict_proba'):
+                                        proba = best_model.predict_proba(X_test)
+                                        if proba.shape[1] == 2:
+                                            fpr, tpr, _ = roc_curve(y_test, proba[:, 1])
+                                            auc = roc_auc_score(y_test, proba[:, 1])
+                                            fig = px.area(x=fpr, y=tpr, title=f"ROC Curve (AUC={auc:.3f})",
+                                                labels={'x': 'FPR', 'y': 'TPR'})
+                                            fig.add_shape(type='line', x0=0, x1=1, y0=0, y1=1,
+                                                line=dict(dash='dash', color='gray'))
+                                            st.plotly_chart(fig, use_container_width=True)
+                                except:
+                                    pass
+                        else:
+                            st.subheader("Actual vs Predicted")
+                            fig = px.scatter(x=y_test, y=preds, labels={'x': 'Actual', 'y': 'Predicted'},
+                                title=f"Actual vs Predicted — {best_name}",
+                                color_discrete_sequence=["#818cf8"])
+                            fig.add_shape(type='line', x0=min(y_test), x1=max(y_test),
+                                y0=min(y_test), y1=max(y_test), line=dict(dash='dash', color='red'))
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Feature Importance / SHAP (Section 23)
+                        st.subheader("🔍 Feature Importance (SHAP)")
+                        try:
+                            explainer = shap.TreeExplainer(best_model)
+                            shap_values = explainer.shap_values(X_test)
+                            fig, ax = plt.subplots(figsize=(8, 5))
+                            if is_class and isinstance(shap_values, list):
+                                shap.summary_plot(shap_values[1], X_test, show=False)
+                            else:
+                                shap.summary_plot(shap_values, X_test, show=False)
+                            st.pyplot(fig)
+                        except:
+                            # Fallback: built-in feature importance
+                            if hasattr(best_model, 'feature_importances_'):
+                                imp = pd.DataFrame({
+                                    'Feature': features, 
+                                    'Importance': best_model.feature_importances_
+                                }).sort_values('Importance', ascending=True)
+                                fig = px.bar(imp, x='Importance', y='Feature', orientation='h',
+                                    title="Feature Importance", color_discrete_sequence=["#818cf8"])
+                                st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.error("Not enough data after dropping missing values.")
+
+    # ═══════════════════════════════════
+    # TAB 6: PREDICTION PLAYGROUND (Section 24)
+    # ═══════════════════════════════════
+    with tabs[5]:
+        st.header("🔮 Prediction Playground")
+        
+        if st.session_state.trained_model is None:
+            st.info("👆 Train a model in the AutoML tab first, then come here to make predictions!")
+        else:
+            info = st.session_state.model_info
+            st.success(f"Using trained **{info['name']}** model on target: **{info['target']}**")
+            
+            st.subheader("Enter Feature Values")
+            input_data = {}
+            cols_per_row = 3
+            feature_list = info['features']
+            for i in range(0, len(feature_list), cols_per_row):
+                row_cols = st.columns(cols_per_row)
+                for j, col_name in enumerate(feature_list[i:i+cols_per_row]):
+                    with row_cols[j]:
+                        if col_name in info['label_encoders']:
+                            le = info['label_encoders'][col_name]
+                            options = list(le.classes_)
+                            val = st.selectbox(col_name, options, key=f"pred_{col_name}")
+                            input_data[col_name] = le.transform([val])[0]
+                        else:
+                            default = float(df[col_name].median()) if pd.api.types.is_numeric_dtype(df[col_name]) else 0.0
+                            input_data[col_name] = st.number_input(col_name, value=default, key=f"pred_{col_name}")
+            
+            if st.button("🎯 Predict", use_container_width=True):
+                input_df = pd.DataFrame([input_data])
+                pred = st.session_state.trained_model.predict(input_df)[0]
+                
+                if info['is_class'] and info['target_le']:
+                    pred_label = info['target_le'].inverse_transform([int(pred)])[0]
+                    st.markdown(f"### Prediction: **{pred_label}**")
+                    
+                    if hasattr(st.session_state.trained_model, 'predict_proba'):
+                        proba = st.session_state.trained_model.predict_proba(input_df)[0]
+                        classes = info['target_le'].classes_ if info['target_le'] else range(len(proba))
+                        prob_df = pd.DataFrame({'Class': classes, 'Probability': proba})
+                        fig = px.bar(prob_df, x='Class', y='Probability', title="Prediction Confidence",
+                            color_discrete_sequence=["#818cf8"])
+                        st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.markdown(f"### Predicted Value: **{pred:.4f}**")
+
+    # ═══════════════════════════════════
+    # TAB 7: ANOMALY DETECTION (Sections 11, 25)
+    # ═══════════════════════════════════
+    with tabs[6]:
+        st.header("Anomaly & Outlier Detection")
+        
+        method = st.selectbox("Detection Method", ["IQR (Interquartile Range)", "Z-Score", "Isolation Forest (Multivariate)"])
+        
+        if method == "IQR (Interquartile Range)":
+            col = st.selectbox("Column", num_cols_list, key="iqr_col")
+            if st.button("Detect IQR Outliers"):
+                Q1 = df[col].quantile(0.25)
+                Q3 = df[col].quantile(0.75)
+                IQR = Q3 - Q1
+                outliers = df[(df[col] < Q1 - 1.5*IQR) | (df[col] > Q3 + 1.5*IQR)]
+                st.error(f"Found **{len(outliers)}** outliers ({len(outliers)/len(df)*100:.1f}%)")
+                
+                fig = px.box(df, y=col, title=f"Box Plot with Outliers — {col}", points="outliers",
+                    color_discrete_sequence=["#f87171"])
+                st.plotly_chart(fig, use_container_width=True)
+                st.dataframe(outliers, use_container_width=True)
+                
+        elif method == "Z-Score":
+            col = st.selectbox("Column", num_cols_list, key="zscore_col")
+            threshold = st.slider("Z-Score Threshold", 2.0, 4.0, 3.0, 0.1)
+            if st.button("Detect Z-Score Outliers"):
+                z = np.abs(stats.zscore(df[col].dropna()))
+                outlier_mask = z > threshold
+                outliers = df.loc[df[col].dropna().index[outlier_mask]]
+                st.error(f"Found **{len(outliers)}** outliers ({len(outliers)/len(df)*100:.1f}%)")
+                st.dataframe(outliers, use_container_width=True)
+                
+        elif method == "Isolation Forest (Multivariate)":
+            if len(num_cols_list) >= 2:
+                iso_cols = st.multiselect("Select Columns", num_cols_list, default=num_cols_list[:min(4, len(num_cols_list))], key="iso_cols")
+                contamination = st.slider("Contamination", 0.01, 0.15, 0.05)
+                if st.button("Run Isolation Forest") and len(iso_cols) >= 2:
+                    clean = df[iso_cols].dropna()
+                    iso = IsolationForest(contamination=contamination, random_state=42)
+                    preds = iso.fit_predict(clean)
+                    clean['Anomaly'] = ['Anomaly' if p == -1 else 'Normal' for p in preds]
+                    anomalies = clean[clean['Anomaly'] == 'Anomaly']
+                    st.error(f"Found **{len(anomalies)}** anomalies ({len(anomalies)/len(clean)*100:.1f}%)")
+                    
