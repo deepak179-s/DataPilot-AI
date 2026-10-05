@@ -932,3 +932,71 @@ else:
                     anomalies = clean[clean['Anomaly'] == 'Anomaly']
                     st.error(f"Found **{len(anomalies)}** anomalies ({len(anomalies)/len(clean)*100:.1f}%)")
                     
+                    if len(iso_cols) >= 2:
+                        fig = px.scatter(clean, x=iso_cols[0], y=iso_cols[1], color='Anomaly',
+                            color_discrete_map={'Normal': '#34d399', 'Anomaly': '#f87171'},
+                            title="Anomaly Scatter Plot")
+                        st.plotly_chart(fig, use_container_width=True)
+                    st.dataframe(anomalies.drop('Anomaly', axis=1), use_container_width=True)
+            else:
+                st.info("Need at least 2 numerical columns for Isolation Forest.")
+
+    # ═══════════════════════════════════
+    # TAB 8: AI INSIGHTS (Section 28)
+    # ═══════════════════════════════════
+    with tabs[7]:
+        st.header("💡 AI-Generated Insights & Recommendations")
+        
+        insights = []
+        
+        # Data Quality Insights
+        q = compute_quality_score(df)
+        if q < 60:
+            insights.append(("🔴", "Critical Data Quality Issue", f"Data quality score is only {q}/100. Heavy cleaning is needed before analysis."))
+        elif q < 80:
+            insights.append(("🟡", "Moderate Data Quality", f"Data quality score is {q}/100. Some cleaning recommended."))
+        else:
+            insights.append(("🟢", "Good Data Quality", f"Data quality score is {q}/100. Dataset is in good shape!"))
+        
+        # Missing value insights
+        missing_cols = df.columns[df.isnull().any()].tolist()
+        if missing_cols:
+            worst = df[missing_cols].isnull().sum().idxmax()
+            worst_pct = df[worst].isnull().sum() / len(df) * 100
+            insights.append(("⚠️", "Missing Values", f"'{worst}' has the most missing values ({worst_pct:.1f}%). Consider imputation or dropping."))
+        
+        # Correlation insights
+        if len(num_cols_list) >= 2:
+            corr = df[num_cols_list].corr()
+            for i in range(len(corr.columns)):
+                for j in range(i+1, len(corr.columns)):
+                    val = corr.iloc[i, j]
+                    if abs(val) > 0.85:
+                        insights.append(("🔗", "High Correlation", f"'{corr.columns[i]}' and '{corr.columns[j]}' are highly correlated (r={val:.2f}). Consider removing one to reduce multicollinearity."))
+        
+        # Skewness insights
+        for col in num_cols_list:
+            skew = df[col].skew()
+            if abs(skew) > 2:
+                insights.append(("📐", "Extreme Skewness", f"'{col}' is extremely skewed (skew={skew:.2f}). Apply log/sqrt transformation."))
+        
+        # Class imbalance (Section 36)
+        potential_targets = [c for c in df.columns if df[c].nunique() < 10 and df[c].nunique() > 1]
+        for col in potential_targets[:3]:
+            vc = df[col].value_counts(normalize=True)
+            if vc.min() < 0.1:
+                insights.append(("⚖️", "Class Imbalance", f"'{col}' has severe class imbalance (minority class: {vc.min()*100:.1f}%). Consider SMOTE or class weights."))
+        
+        # Constant columns
+        const_cols = [c for c in df.columns if df[c].nunique() <= 1]
+        if const_cols:
+            insights.append(("🗑️", "Constant Columns", f"Columns {const_cols} have only 1 unique value and provide no information. Drop them."))
+        
+        # Display insights
+        for icon, title, desc in insights:
+            st.markdown(f"""<div class='insight-card'>
+                <strong>{icon} {title}</strong><br>{desc}
+            </div>""", unsafe_allow_html=True)
+        
+        if not insights:
+            st.success("✅ No significant issues detected. Your dataset looks great!")
