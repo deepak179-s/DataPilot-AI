@@ -1000,3 +1000,93 @@ else:
         
         if not insights:
             st.success("✅ No significant issues detected. Your dataset looks great!")
+
+    # ═══════════════════════════════════
+    # TAB 9: AI CHATBOT (Section 27)
+    # ═══════════════════════════════════
+    with tabs[8]:
+        st.header("💬 Ask Your Dataset")
+        
+        import requests as req
+        import json
+        
+        OLLAMA_URL = "http://localhost:11434"
+        MODEL_NAME = "tinyllama"
+        
+        def check_ollama():
+            try:
+                r = req.get(f"{OLLAMA_URL}/api/tags", timeout=2)
+                return r.status_code == 200
+            except:
+                return False
+        
+        def get_models():
+            try:
+                r = req.get(f"{OLLAMA_URL}/api/tags", timeout=2)
+                if r.status_code == 200:
+                    return [m["name"] for m in r.json().get("models", [])]
+            except:
+                return []
+            return []
+        
+        ollama_ok = check_ollama()
+        models = get_models() if ollama_ok else []
+        
+        if not ollama_ok:
+            st.error("⚠️ Ollama is not running. Start it with `ollama serve` in your terminal.")
+            st.code("ollama serve\n# Then in another tab:\nollama pull tinyllama", language="bash")
+        elif MODEL_NAME not in [m.split(":")[0] for m in models]:
+            st.warning(f"Model `{MODEL_NAME}` not found. Run: `ollama pull {MODEL_NAME}`")
+        else:
+            st.success(f"✅ AI Engine ready — GPU-accelerated on Apple Silicon")
+            
+            for msg in st.session_state.messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            prompt = st.chat_input("Ask anything about your dataset...")
+            if prompt:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.write(prompt)
+                    
+                with st.chat_message("assistant"):
+                    num_summary = df.describe().to_string()
+                    
+                    system = f"""You are a strict Data Analyst AI. You are given the exact summary statistics of a dataset below.
+You MUST answer the user's question by extracting the exact correct number from the statistics below.
+DO NOT perform any math yourself. DO NOT invent or guess any numbers. If the exact answer is not in the statistics, say "I cannot determine this from the summary statistics."
+
+STATISTICS:
+{num_summary}
+"""
+                    
+                    payload = {
+                        "model": MODEL_NAME,
+                        "messages": [
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "stream": True,
+                        "options": {
+                            "temperature": 0.1,
+                            "top_p": 0.9
+                        }
+                    }
+                    
+                    try:
+                        container = st.empty()
+                        response = ""
+                        with req.post(f"{OLLAMA_URL}/api/chat", json=payload, stream=True, timeout=60) as r:
+                            for line in r.iter_lines():
+                                if line:
+                                    chunk = json.loads(line)
+                                    token = chunk.get("message", {}).get("content", "")
+                                    response += token
+                                    container.markdown(response + "▌")
+                                    if chunk.get("done"):
+                                        break
+                        container.markdown(response)
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                    except Exception as e:
+                        st.error(f"Error: {e}")
