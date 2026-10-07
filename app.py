@@ -266,13 +266,52 @@ if st.session_state.df is None:
             load_data(uploaded_file)
             
         st.divider()
-        st.markdown("<p style='text-align: center; color: #64748B;'>Or try it instantly:</p>", unsafe_allow_html=True)
-        if st.button("🚢 Load Titanic Sample Dataset", use_container_width=True):
-            st.session_state.df = sns.load_dataset('titanic')
-            st.session_state.filename = "titanic.csv"
-            st.session_state.cleaning_log = []
-            st.rerun()
-            
+        st.markdown("<p style='text-align: center; color: #64748B;'>Or try it instantly with popular datasets:</p>", unsafe_allow_html=True)
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("🚢 Titanic (Classification)", use_container_width=True):
+                st.session_state.df = sns.load_dataset('titanic')
+                st.session_state.filename = "titanic.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+        with c2:
+            if st.button("🌸 Iris (Clustering/Class)", use_container_width=True):
+                st.session_state.df = sns.load_dataset('iris')
+                st.session_state.filename = "iris.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+        with c3:
+            if st.button("🐧 Penguins (Multi-class)", use_container_width=True):
+                st.session_state.df = sns.load_dataset('penguins')
+                st.session_state.filename = "penguins.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+                
+        c4, c5, c6 = st.columns(3)
+        with c4:
+            if st.button("💎 Diamonds (Regression)", use_container_width=True):
+                st.session_state.df = sns.load_dataset('diamonds')
+                st.session_state.filename = "diamonds.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+        with c5:
+            if st.button("🏥 Breast Cancer (sklearn)", use_container_width=True):
+                from sklearn.datasets import load_breast_cancer
+                data = load_breast_cancer(as_frame=True)
+                st.session_state.df = data.frame
+                st.session_state.filename = "breast_cancer.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+        with c6:
+            if st.button("🏠 California Housing", use_container_width=True):
+                from sklearn.datasets import fetch_california_housing
+                data = fetch_california_housing(as_frame=True)
+                st.session_state.df = data.frame
+                st.session_state.filename = "california_housing.csv"
+                st.session_state.cleaning_log = []
+                st.rerun()
+                
         st.markdown("</div>", unsafe_allow_html=True)
         
         # Feature highlights
