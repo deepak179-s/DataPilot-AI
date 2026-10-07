@@ -37,9 +37,9 @@ st.set_page_config(page_title="DataPilot AI", page_icon="🚀", layout="wide")
 # ─── Custom CSS for Premium Look ───
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
     
-    html, body { font-family: 'Inter', sans-serif; }
+    html, body { font-family: 'Outfit', sans-serif; }
     
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
     
