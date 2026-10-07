@@ -1125,26 +1125,38 @@ else:
                     st.write(prompt)
                     
                 with st.chat_message("assistant"):
-                    num_summary = df.describe().to_string()
+                    # Format stats in a simple list so tiny models don't get confused by tables
+                    stats_text = []
+                    desc = df.describe()
+                    for col in desc.columns:
+                        if 'mean' in desc.index and pd.notna(desc.loc['mean', col]):
+                            stats_text.append(f"- Column '{col}' -> Average: {desc.loc['mean', col]:.2f}, Min: {desc.loc['min', col]:.2f}, Max: {desc.loc['max', col]:.2f}")
                     
-                    system = f"""You are a strict Data Analyst AI. You are given the exact summary statistics of a dataset below.
-You MUST answer the user's question by extracting the exact correct number from the statistics below.
-DO NOT perform any math yourself. DO NOT invent or guess any numbers. If the exact answer is not in the statistics, say "I cannot determine this from the summary statistics."
+                    missing_stats = ", ".join([f"{col}: {df[col].isnull().sum()}" for col in df.columns if df[col].isnull().sum() > 0])
+                    if not missing_stats: missing_stats = "None"
+                    
+                    system = f"""You are a strict, factual Data Assistant. 
+You must ONLY use the exact statistics provided below to answer the question.
+If the answer is not in the data below, you MUST say "I cannot determine this from the summary."
+Keep your answer very short (1 sentence).
 
-STATISTICS:
-{num_summary}
+DATASET STATISTICS:
+Rows: {df.shape[0]}
+Columns: {df.shape[1]}
+Missing values: {missing_stats}
+{chr(10).join(stats_text)}
 """
+                    
+                    # We only pass the system prompt and the immediate user question to avoid small model context drift
+                    messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
                     
                     payload = {
                         "model": MODEL_NAME,
-                        "messages": [
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": prompt}
-                        ],
+                        "messages": messages,
                         "stream": True,
                         "options": {
-                            "temperature": 0.1,
-                            "top_p": 0.9
+                            "temperature": 0.0,
+                            "top_p": 0.1
                         }
                     }
                     
