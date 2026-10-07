@@ -1125,19 +1125,23 @@ else:
                     st.write(prompt)
                     
                 with st.chat_message("assistant"):
-                    # Format stats in a simple list so tiny models don't get confused by tables
+                    # Format stats dynamically for both numeric and categorical columns
                     stats_text = []
-                    desc = df.describe()
-                    for col in desc.columns:
-                        if 'mean' in desc.index and pd.notna(desc.loc['mean', col]):
-                            stats_text.append(f"- Column '{col}' -> Average: {desc.loc['mean', col]:.2f}, Min: {desc.loc['min', col]:.2f}, Max: {desc.loc['max', col]:.2f}")
+                    for col in df.columns:
+                        if pd.api.types.is_numeric_dtype(df[col]):
+                            stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}")
+                        else:
+                            vc = df[col].value_counts().to_dict()
+                            vc_str = ", ".join([f"{str(k)}: {v}" for k, v in list(vc.items())[:5]])
+                            stats_text.append(f"- '{col}' (Categorical/Text): {vc_str}")
                     
                     missing_stats = ", ".join([f"{col}: {df[col].isnull().sum()}" for col in df.columns if df[col].isnull().sum() > 0])
                     if not missing_stats: missing_stats = "None"
                     
                     system = f"""You are a strict, factual Data Assistant. 
 You must ONLY use the exact statistics provided below to answer the question.
-If the answer is not in the data below, you MUST say "I cannot determine this from the summary."
+DO NOT perform any calculations. DO NOT guess.
+If the answer is not in the data below, you MUST exactly say: "I cannot determine this from the summary."
 Keep your answer very short (1 sentence).
 
 DATASET STATISTICS:
