@@ -39,7 +39,7 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
+    html, body { font-family: 'Inter', sans-serif; }
     
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
     
