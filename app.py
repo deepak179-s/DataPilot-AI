@@ -43,21 +43,64 @@ st.markdown("""
     
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
     
+    :root {
+        --card-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        --card-border: #334155;
+        --card-title: #94a3b8;
+        --card-val: #f8fafc;
+        --card-shadow: rgba(0,0,0,0.4);
+        --insight-bg: #1e293b;
+        --insight-text: #f8fafc;
+        --feature-bg: #1e293b;
+        --feature-title: #e2e8f0;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        :root {
+            --card-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --card-border: #e2e8f0;
+            --card-title: #64748b;
+            --card-val: #0f172a;
+            --card-shadow: rgba(0,0,0,0.05);
+            --insight-bg: #f8fafc;
+            --insight-text: #334155;
+            --feature-bg: #f8fafc;
+            --feature-title: #0f172a;
+        }
+    }
+    
     .metric-card {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 1px solid #334155;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 16px;
         padding: 20px;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 20px var(--card-shadow);
     }
-    .metric-card h3 { color: #94a3b8; font-size: 0.85rem; margin: 0; font-weight: 500; }
-    .metric-card h1 { font-size: 2rem; margin: 5px 0 0 0; font-weight: 700; }
+    .metric-card h3 { color: var(--card-title); font-size: 0.85rem; margin: 0; font-weight: 500; }
+    .metric-card h1 { color: var(--card-val); font-size: 2rem; margin: 5px 0 0 0; font-weight: 700; }
     .metric-blue h1 { color: #38bdf8; }
     .metric-purple h1 { color: #a78bfa; }
     .metric-amber h1 { color: #fbbf24; }
     .metric-green h1 { color: #34d399; }
     .metric-red h1 { color: #f87171; }
+    
+    .hero-card {
+        background: var(--card-bg);
+        padding: 30px;
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+        box-shadow: 0 20px 40px var(--card-shadow);
+    }
+    
+    .feature-card {
+        text-align: center;
+        background: var(--feature-bg);
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid var(--card-border);
+    }
+    .feature-title { color: var(--feature-title); font-weight: 600; margin: 5px 0; }
     
     .quality-badge {
         display: inline-block;
@@ -71,26 +114,25 @@ st.markdown("""
     .quality-bad { background: #7f1d1d; color: #f87171; }
     
     .insight-card {
-        background: #1e293b;
+        background: var(--insight-bg);
+        color: var(--insight-text);
         border-left: 4px solid #818cf8;
         border-radius: 0 12px 12px 0;
         padding: 15px;
         margin: 8px 0;
     }
     
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px 8px 0 0;
-        padding: 8px 16px;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 4px; }
+    .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0 0; padding: 8px 16px; }
     
     div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 1px solid #334155;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
         border-radius: 12px;
         padding: 15px;
+    }
+    div[data-testid="stMetric"] label, div[data-testid="stMetric"] div {
+        color: var(--card-val) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -184,7 +226,7 @@ if st.session_state.df is None:
         """, unsafe_allow_html=True)
         
         st.markdown("""
-        <div style='background: linear-gradient(135deg, #1E293B, #0F172A); padding: 30px; border-radius: 20px; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.4);'>
+        <div class='hero-card'>
         """, unsafe_allow_html=True)
         
         uploaded_file = st.file_uploader("Upload your CSV, Excel, or JSON dataset", type=["csv", "xlsx", "xls", "json"])
@@ -211,9 +253,9 @@ if st.session_state.df is None:
             ("💬", "AI Chat", "Ask your dataset")
         ]
         for col, (icon, title, desc) in zip([f1,f2,f3,f4], features):
-            col.markdown(f"""<div style='text-align:center; background:#1e293b; border-radius:12px; padding:15px; border:1px solid #334155;'>
+            col.markdown(f"""<div class='feature-card'>
                 <div style='font-size:2rem;'>{icon}</div>
-                <div style='color:#e2e8f0; font-weight:600; margin:5px 0;'>{title}</div>
+                <div class='feature-title'>{title}</div>
                 <div style='color:#64748b; font-size:0.8rem;'>{desc}</div>
             </div>""", unsafe_allow_html=True)
 
