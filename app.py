@@ -1124,7 +1124,7 @@ else:
         import json
         
         OLLAMA_URL = "http://localhost:11434"
-        MODEL_NAME = "tinyllama"
+        MODEL_NAME = "llama3.2"
         
         def check_ollama():
             try:
@@ -1147,7 +1147,7 @@ else:
         
         if not ollama_ok:
             st.error("⚠️ Ollama is not running. Start it with `ollama serve` in your terminal.")
-            st.code("ollama serve\n# Then in another tab:\nollama pull tinyllama", language="bash")
+            st.code("ollama serve\n# Then in another tab:\nollama pull llama3.2", language="bash")
         elif MODEL_NAME not in [m.split(":")[0] for m in models]:
             st.warning(f"Model `{MODEL_NAME}` not found. Run: `ollama pull {MODEL_NAME}`")
         else:
@@ -1168,7 +1168,7 @@ else:
                     stats_text = []
                     for col in df.columns:
                         if pd.api.types.is_numeric_dtype(df[col]):
-                            stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}")
+                            stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Median={df[col].median():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}, Skewness={df[col].skew():.2f}")
                         else:
                             vc = df[col].value_counts().to_dict()
                             vc_str = ", ".join([f"{str(k)}: {v}" for k, v in list(vc.items())[:5]])
