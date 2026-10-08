@@ -153,6 +153,194 @@ st.markdown("""
     div[data-testid="stMetric"] label, div[data-testid="stMetric"] div {
         color: var(--card-val) !important;
     }
+    /* ══════ Refined dashboard and responsive layout ══════ */
+    html, body, [class*="css"] {
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+    .stApp {
+        background: radial-gradient(ellipse at 12% 0%, #172440 0%, #0d1424 42%, #090e18 100%) !important;
+    }
+    .main .block-container {
+        max-width: 1680px;
+        padding: 1.75rem clamp(1rem, 3vw, 2.75rem) 3rem;
+    }
+    .metric-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 14px;
+        margin: 16px 0 22px;
+    }
+    .metric-card {
+        min-width: 0;
+        min-height: 158px;
+        padding: 20px 12px;
+        border-radius: 20px;
+        background: linear-gradient(150deg, rgba(27, 39, 60, .96), rgba(19, 29, 47, .96));
+        border-color: rgba(148, 163, 184, .14);
+        box-shadow: 0 8px 24px rgba(2, 6, 18, .18);
+        animation: none;
+        transition: border-color .2s ease, background .2s ease;
+    }
+    .metric-card:hover {
+        transform: none;
+        background: linear-gradient(150deg, rgba(32, 47, 72, .98), rgba(22, 34, 55, .98));
+        border-color: rgba(96, 165, 250, .35);
+        box-shadow: 0 10px 26px rgba(2, 6, 18, .24);
+    }
+    .metric-card .mc-icon { font-size: 1.65rem; margin-bottom: 10px; }
+    .metric-card .mc-label { font-size: .7rem; letter-spacing: 1.2px; }
+    .metric-card .mc-value {
+        font-size: clamp(1.35rem, 2vw, 1.9rem);
+        overflow-wrap: anywhere;
+    }
+    .section-header { animation: none; margin: 22px 0 14px; flex-wrap: wrap; }
+    .section-header .sh-text { font-size: clamp(1.2rem, 2vw, 1.5rem); letter-spacing: -.02em; }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 5px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        background: rgba(16, 25, 41, .82);
+        border-color: rgba(148, 163, 184, .12);
+    }
+    .stTabs [data-baseweb="tab"] { white-space: nowrap; padding: 9px 14px; }
+    .stTabs [aria-selected="true"] {
+        background: rgba(96, 165, 250, .16) !important;
+        color: #bfdbfe !important;
+    }
+    .stButton > button, [data-testid="stDownloadButton"] button {
+        min-height: 42px;
+        border: 1px solid rgba(148, 163, 184, .2) !important;
+        transition: background .18s ease, border-color .18s ease !important;
+    }
+    .stButton > button:hover, [data-testid="stDownloadButton"] button:hover {
+        transform: none !important;
+        border-color: rgba(96, 165, 250, .55) !important;
+        box-shadow: 0 5px 16px rgba(2, 6, 18, .2) !important;
+    }
+    .stDataFrame, [data-testid="stTable"] {
+        border: 1px solid rgba(148, 163, 184, .14);
+        border-radius: 16px !important;
+        overflow: hidden;
+    }
+
+    /* ══════ Chat experience ══════ */
+    .chat-hero {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin: 8px 0 20px;
+        padding: 22px 24px;
+        border: 1px solid rgba(129, 140, 248, .18);
+        border-radius: 22px;
+        background: linear-gradient(110deg, rgba(25, 39, 62, .96), rgba(20, 29, 48, .82));
+    }
+    .chat-hero-icon {
+        flex: 0 0 54px;
+        width: 54px;
+        height: 54px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(129, 140, 248, .28);
+        border-radius: 17px;
+        background: linear-gradient(135deg, rgba(96, 165, 250, .2), rgba(192, 132, 252, .2));
+        font-size: 1.55rem;
+    }
+    .chat-hero-copy { flex: 1; min-width: 0; }
+    .chat-hero-kicker {
+        margin: 0 0 4px;
+        color: #8b9bb3;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .chat-hero-title { margin: 0; color: #f1f5f9; font-size: 1.35rem; font-weight: 750; }
+    .chat-hero-subtitle { margin: 4px 0 0; color: #9baec7; font-size: .88rem; }
+    .chat-model-chip {
+        flex: 0 0 auto;
+        padding: 7px 11px;
+        border: 1px solid rgba(52, 211, 153, .22);
+        border-radius: 999px;
+        background: rgba(16, 185, 129, .08);
+        color: #6ee7b7;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+    }
+    .chat-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 16px;
+        padding: 12px 15px;
+        border: 1px solid rgba(148, 163, 184, .15);
+        border-radius: 14px;
+        background: rgba(17, 27, 45, .72);
+        color: #b7c5d8;
+        font-size: .88rem;
+    }
+    .chat-status-ready { border-color: rgba(52, 211, 153, .2); }
+    .chat-status-warn { border-color: rgba(251, 191, 36, .24); }
+    .chat-status-offline { border-color: rgba(251, 113, 133, .22); }
+    .chat-welcome {
+        max-width: 820px;
+        margin: 26px auto;
+        padding: clamp(28px, 5vw, 54px) 24px;
+        background: linear-gradient(145deg, rgba(25, 39, 62, .96), rgba(17, 27, 45, .96));
+        border: 1px solid rgba(129, 140, 248, .2);
+        border-radius: 24px;
+        box-shadow: 0 18px 48px rgba(2, 6, 18, .22);
+        color: #a9b8ce;
+    }
+    .chat-welcome-icon {
+        width: 64px;
+        height: 64px;
+        display: grid;
+        place-items: center;
+        margin: 0 auto 18px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(96, 165, 250, .18), rgba(192, 132, 252, .18));
+        border: 1px solid rgba(129, 140, 248, .25);
+        font-size: 2rem;
+        animation: none;
+    }
+    [data-testid="stChatMessage"] {
+        max-width: 900px;
+        margin: 12px auto;
+        padding: 16px 18px;
+        border: 1px solid rgba(148, 163, 184, .12);
+        border-radius: 18px;
+        background: rgba(19, 29, 47, .78);
+    }
+    [data-testid="stChatMessage"] p { line-height: 1.7; }
+    [data-testid="stChatInput"] {
+        max-width: 940px;
+        margin: 12px auto 0;
+    }
+    [data-testid="stChatInput"] textarea {
+        border: 1px solid rgba(129, 140, 248, .28) !important;
+        border-radius: 16px !important;
+        background: rgba(17, 27, 45, .96) !important;
+        line-height: 1.5;
+    }
+    [data-testid="stChatInput"] textarea:focus {
+        border-color: rgba(96, 165, 250, .75) !important;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, .12) !important;
+    }
+    @media (max-width: 1250px) {
+        .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+        .main .block-container { padding: 1rem .75rem 2rem; }
+        .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .metric-card { min-height: 132px; padding: 16px 8px; }
+        .stTabs [data-baseweb="tab"] { padding: 8px 10px; font-size: .78rem; }
+        [data-testid="stChatMessage"] { padding: 12px; }
+        .chat-hero { align-items: flex-start; padding: 17px; gap: 12px; flex-wrap: wrap; }
+        .chat-model-chip { margin-left: 66px; }
+        .chat-hero-title { font-size: 1.15rem; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1123,8 +1311,15 @@ else:
     # TAB 9: AI CHATBOT (Section 27)
     # ═══════════════════════════════════
     with tabs[8]:
-        st.markdown("<h2 style='font-weight: 800; background: linear-gradient(135deg, #38BDF8, #818CF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>💬 AI Data Assistant</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color: #94A3B8; font-size: 1.1rem; margin-top: -10px;'>Powered by Meta Llama 3.2 (Local & Private)</p>", unsafe_allow_html=True)
+        st.markdown("""<div class='chat-hero'>
+            <div class='chat-hero-icon'>✦</div>
+            <div class='chat-hero-copy'>
+                <p class='chat-hero-kicker'>Private, local AI</p>
+                <h2 class='chat-hero-title'>Chat with your dataset</h2>
+                <p class='chat-hero-subtitle'>Ask a question in plain language and explore your data with confidence.</p>
+            </div>
+            <span class='chat-model-chip'>● LLAMA 3.2</span>
+        </div>""", unsafe_allow_html=True)
         
         import requests as req
         import json
@@ -1147,18 +1342,28 @@ else:
         models = models or []
         
         if not ollama_ok:
-            st.error("⚠️ Ollama is not running. Start it with `ollama serve` in your terminal.")
+            st.markdown("""<div class='chat-status chat-status-offline'>
+                <strong>Ollama is offline.</strong> Start Ollama to enable local chat.
+            </div>""", unsafe_allow_html=True)
             st.code("ollama serve\n# Then in another tab:\nollama pull llama3.2", language="bash")
         elif MODEL_NAME not in [m.split(":")[0] for m in models]:
-            st.warning(f"Model `{MODEL_NAME}` not found. Run: `ollama pull {MODEL_NAME}`")
+            st.markdown(f"""<div class='chat-status chat-status-warn'>
+                <strong>{MODEL_NAME} is not installed.</strong> Add it with <code>ollama pull {MODEL_NAME}</code>.
+            </div>""", unsafe_allow_html=True)
         else:
-            st.success(f"✅ AI Engine ready — GPU-accelerated on Apple Silicon")
+            st.markdown(f"""<div class='chat-status chat-status-ready'>
+                <strong>Ready to chat</strong> · {MODEL_NAME} is running locally. Your dataset stays on this device.
+            </div>""", unsafe_allow_html=True)
             
-            chat_container = st.container(height=500)
+            chat_container = st.container()
             
             with chat_container:
                 if len(st.session_state.messages) == 0:
-                    st.markdown("<div style='text-align: center; color: #64748B; margin-top: 200px;'>Ask a question to start the conversation! Try: <i>What is the median age?</i></div>", unsafe_allow_html=True)
+                    st.markdown("""<div class='chat-welcome'>
+                        <span class='chat-welcome-icon'>🤖</span>
+                        <div style='font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;'>Ask me about your data</div>
+                        <div style='font-size: 0.88rem; color: var(--text-muted);'>Try “What is the average age?” or “Which column has the most missing values?”</div>
+                    </div>""", unsafe_allow_html=True)
                 for msg in st.session_state.messages:
                     avatar = "🧑‍💻" if msg["role"] == "user" else "🤖"
                     with st.chat_message(msg["role"], avatar=avatar):
