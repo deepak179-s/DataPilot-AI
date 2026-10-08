@@ -14,7 +14,7 @@ DataPilot AI is an end-to-end, **100% offline and highly secure** AI-powered dat
 
 ## ✨ Comprehensive Feature Suite
 
-DataPilot AI is split into 9 dedicated workspaces (Tabs) designed to handle every stage of the Data Science lifecycle:
+DataPilot AI is split into 9 dedicated workspaces (Tabs) designed to handle every stage of the Data Science lifecycle. If you don't have a dataset, the landing page includes a **1-Click Sample Dataset Grid** loaded with 6 world-famous datasets (Titanic, Iris, Penguins, Diamonds, Breast Cancer, and California Housing) so you can test features instantly:
 
 ### 1. 📊 Overview & Quality
 - Instantly generates metadata profiles of your dataset.
@@ -61,15 +61,15 @@ A robust, academic-grade statistical testing suite powered by `SciPy`:
 - Highlights anomalous rows directly in the dataset.
 
 ### 9. 💬 AI Chatbot (Powered by Ollama)
-- A conversational interface built directly into your dashboard.
-- Powered by a local **TinyLlama** model running via Ollama.
-- Context-aware: The AI is fed the precise statistical summaries of your dataset and can answer questions about the data structure deterministically without making up numbers (zero hallucinations).
+- A conversational interface built directly into your dashboard featuring a sleek, scrollable ChatGPT-style UI.
+- Powered by a local **Meta Llama 3.2** (3 Billion parameters) running securely via Ollama.
+- **Dynamic Context-Awareness**: The AI is fed precise statistical summaries (Averages, Medians, Skewness, Min, Max) for numeric columns, and Top-5 value counts for categorical data, allowing it to answer deep structural questions deterministically with zero hallucinations.
 
 ---
 
 ## 🛠️ Technology Stack
 
-*   **Frontend Framework:** Streamlit (with Custom Premium CSS for dynamic hover effects, metric cards, and glassmorphism)
+*   **Frontend Framework:** Streamlit (with highly customized Premium CSS featuring glassmorphism, hover animations, the `Outfit` font, and native Light/Dark mode auto-switching).
 *   **Data Processing:** Pandas, NumPy
 *   **Statistics:** SciPy
 *   **Machine Learning:** Scikit-Learn, XGBoost
@@ -84,9 +84,9 @@ A robust, academic-grade statistical testing suite powered by `SciPy`:
 ### 1. Prerequisites
 You must have Python 3.9+ installed and [Ollama](https://ollama.com/) running locally for the AI features to work.
 
-Pull the lightweight local LLM model:
+Pull the local LLM model (Llama 3.2):
 ```bash
-ollama pull tinyllama
+ollama pull llama3.2
 ```
 
 ### 2. Installation
