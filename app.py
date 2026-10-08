@@ -1,13 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.figure_factory as ff
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import (RandomForestClassifier, RandomForestRegressor,
     GradientBoostingClassifier, GradientBoostingRegressor, IsolationForest)
@@ -19,17 +14,11 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
     mean_squared_error, mean_absolute_error, r2_score, roc_auc_score, roc_curve,
     precision_recall_curve, confusion_matrix)
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 import scipy.stats as stats
-import shap
 import warnings
 warnings.filterwarnings('ignore')
 
-try:
-    import xgboost as xgb
-    HAS_XGB = True
-except ImportError:
-    HAS_XGB = False
 
 # ─── Page Config ───
 st.set_page_config(page_title="DataPilot AI", page_icon="🚀", layout="wide")
@@ -37,9 +26,7 @@ st.set_page_config(page_title="DataPilot AI", page_icon="🚀", layout="wide")
 # ─── Custom CSS for Premium Look ───
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-    
-    html, body { font-family: 'Outfit', sans-serif; }
+    html, body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     
     .main .block-container { padding-top: 1rem; max-width: 1400px; }
     
@@ -199,6 +186,13 @@ def load_data(file):
     except Exception as e:
         st.error(f"Error loading file: {e}")
 
+@st.cache_data(show_spinner=False)
+def load_sample_dataset(name):
+    \"\"\"Load and cache a sample dataset on demand.\"\"\"
+    import seaborn as sns
+    return sns.load_dataset(name)
+
+
 def compute_quality_score(df):
     total_cells = df.shape[0] * df.shape[1]
     missing_pct = (df.isnull().sum().sum() / total_cells) * 100 if total_cells > 0 else 0
@@ -271,19 +265,19 @@ if st.session_state.df is None:
         c1, c2, c3 = st.columns(3)
         with c1:
             if st.button("🚢 Titanic (Classification)", use_container_width=True):
-                st.session_state.df = sns.load_dataset('titanic')
+                st.session_state.df = load_sample_dataset('titanic')
                 st.session_state.filename = "titanic.csv"
                 st.session_state.cleaning_log = []
                 st.rerun()
         with c2:
             if st.button("🌸 Iris (Clustering/Class)", use_container_width=True):
-                st.session_state.df = sns.load_dataset('iris')
+                st.session_state.df = load_sample_dataset('iris')
                 st.session_state.filename = "iris.csv"
                 st.session_state.cleaning_log = []
                 st.rerun()
         with c3:
             if st.button("🐧 Penguins (Multi-class)", use_container_width=True):
-                st.session_state.df = sns.load_dataset('penguins')
+                st.session_state.df = load_sample_dataset('penguins')
                 st.session_state.filename = "penguins.csv"
                 st.session_state.cleaning_log = []
                 st.rerun()
@@ -291,7 +285,7 @@ if st.session_state.df is None:
         c4, c5, c6 = st.columns(3)
         with c4:
             if st.button("💎 Diamonds (Regression)", use_container_width=True):
-                st.session_state.df = sns.load_dataset('diamonds')
+                st.session_state.df = load_sample_dataset('diamonds')
                 st.session_state.filename = "diamonds.csv"
                 st.session_state.cleaning_log = []
                 st.rerun()
@@ -809,6 +803,13 @@ else:
                     
                     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
                     
+                    # Load XGBoost only when AutoML training is requested.
+                    try:
+                        import xgboost as xgb
+                        HAS_XGB = True
+                    except ImportError:
+                        HAS_XGB = False
+
                     # Models (Section 20)
                     if is_class:
                         models = {
@@ -933,6 +934,10 @@ else:
                         # Feature Importance / SHAP (Section 23)
                         st.subheader("🔍 Feature Importance (SHAP)")
                         try:
+                            import shap
+                            import matplotlib
+                            matplotlib.use('Agg')
+                            import matplotlib.pyplot as plt
                             explainer = shap.TreeExplainer(best_model)
                             shap_values = explainer.shap_values(X_test)
                             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1127,24 +1132,19 @@ else:
         OLLAMA_URL = "http://localhost:11434"
         MODEL_NAME = "llama3.2"
         
-        def check_ollama():
-            try:
-                r = req.get(f"{OLLAMA_URL}/api/tags", timeout=2)
-                return r.status_code == 200
-            except:
-                return False
-        
         def get_models():
             try:
-                r = req.get(f"{OLLAMA_URL}/api/tags", timeout=2)
+                r = req.get(f"{OLLAMA_URL}/api/tags", timeout=3)
                 if r.status_code == 200:
                     return [m["name"] for m in r.json().get("models", [])]
-            except:
-                return []
-            return []
+            except Exception:
+                return None
+            return None
         
-        ollama_ok = check_ollama()
-        models = get_models() if ollama_ok else []
+        # One local request gives both server status and installed model names.
+        models = get_models()
+        ollama_ok = models is not None
+        models = models or []
         
         if not ollama_ok:
             st.error("⚠️ Ollama is not running. Start it with `ollama serve` in your terminal.")
