@@ -1118,7 +1118,8 @@ else:
     # TAB 9: AI CHATBOT (Section 27)
     # ═══════════════════════════════════
     with tabs[8]:
-        st.header("💬 Ask Your Dataset")
+        st.markdown("<h2 style='font-weight: 800; background: linear-gradient(135deg, #38BDF8, #818CF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>💬 AI Data Assistant</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #94A3B8; font-size: 1.1rem; margin-top: -10px;'>Powered by Meta Llama 3.2 (Local & Private)</p>", unsafe_allow_html=True)
         
         import requests as req
         import json
@@ -1153,17 +1154,24 @@ else:
         else:
             st.success(f"✅ AI Engine ready — GPU-accelerated on Apple Silicon")
             
-            for msg in st.session_state.messages:
-                with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
+            chat_container = st.container(height=500)
+            
+            with chat_container:
+                if len(st.session_state.messages) == 0:
+                    st.markdown("<div style='text-align: center; color: #64748B; margin-top: 200px;'>Ask a question to start the conversation! Try: <i>What is the median age?</i></div>", unsafe_allow_html=True)
+                for msg in st.session_state.messages:
+                    avatar = "🧑‍💻" if msg["role"] == "user" else "🤖"
+                    with st.chat_message(msg["role"], avatar=avatar):
+                        st.markdown(msg["content"])
 
             prompt = st.chat_input("Ask anything about your dataset...")
             if prompt:
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.write(prompt)
-                    
-                with st.chat_message("assistant"):
+                with chat_container:
+                    with st.chat_message("user", avatar="🧑‍💻"):
+                        st.write(prompt)
+                        
+                    with st.chat_message("assistant", avatar="🤖"):
                     # Format stats dynamically for both numeric and categorical columns
                     stats_text = []
                     for col in df.columns:
