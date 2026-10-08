@@ -18,395 +18,366 @@ from sklearn.preprocessing import LabelEncoder
 import scipy.stats as stats
 import warnings
 warnings.filterwarnings('ignore')
-
+import io
+import time
+from html import escape
 
 # ─── Page Config ───
 st.set_page_config(page_title="DataPilot AI", page_icon="🚀", layout="wide")
 
-# ─── Custom CSS for Premium Look ───
+# ─── Premium CSS Design System ───
 st.markdown("""
 <style>
-    html, body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    
-    .main .block-container { padding-top: 1rem; max-width: 1400px; }
-    
     :root {
-        --card-bg: rgba(30, 41, 59, 0.7);
-        --card-bg-hover: rgba(30, 41, 59, 0.95);
-        --card-border: rgba(255, 255, 255, 0.1);
-        --card-border-hover: #38bdf8;
-        --card-title: #94a3b8;
-        --card-val: #f8fafc;
-        --card-shadow: rgba(0,0,0,0.4);
-        --card-shadow-hover: rgba(56, 189, 248, 0.25);
-        --insight-bg: rgba(30, 41, 59, 0.7);
-        --insight-text: #f8fafc;
-        --feature-bg: rgba(30, 41, 59, 0.7);
-        --feature-title: #e2e8f0;
-        --glass-blur: blur(12px);
+        color-scheme: dark;
+        --page: #0b1220;
+        --surface: #111b2d;
+        --surface-raised: #17243a;
+        --surface-soft: #1b2a42;
+        --border: rgba(148, 163, 184, .16);
+        --border-strong: rgba(148, 163, 184, .26);
+        --text: #f1f5f9;
+        --muted: #9aacc2;
+        --quiet: #71839b;
+        --blue: #59c6ff;
+        --violet: #a990ff;
+        --mint: #48d6b0;
+        --amber: #ffc76a;
+        --rose: #ff8296;
+        --radius: 18px;
+        --shadow: 0 16px 38px rgba(1, 7, 18, .24);
+        --text-primary: var(--text);
+        --text-secondary: var(--muted);
+        --text-muted: var(--quiet);
+        --accent-emerald: var(--mint);
+        --accent-amber: var(--amber);
+        --accent-rose: var(--rose);
     }
-    
-    @media (prefers-color-scheme: light) {
-        :root {
-            --card-bg: rgba(255, 255, 255, 0.7);
-            --card-bg-hover: rgba(255, 255, 255, 0.95);
-            --card-border: rgba(0, 0, 0, 0.1);
-            --card-border-hover: #38bdf8;
-            --card-title: #64748b;
-            --card-val: #0f172a;
-            --card-shadow: rgba(0,0,0,0.05);
-            --card-shadow-hover: rgba(56, 189, 248, 0.15);
-            --insight-bg: rgba(255, 255, 255, 0.7);
-            --insight-text: #334155;
-            --feature-bg: rgba(255, 255, 255, 0.7);
-            --feature-title: #0f172a;
-        }
-    }
-    
-    @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .metric-card, .hero-card, .feature-card, .insight-card {
-        backdrop-filter: var(--glass-blur);
-        -webkit-backdrop-filter: var(--glass-blur);
-        animation: fadeUp 0.6s ease-out forwards;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-
-    .metric-card {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 16px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 4px 20px var(--card-shadow);
-    }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        background: var(--card-bg-hover);
-        border-color: var(--card-border-hover);
-        box-shadow: 0 10px 30px var(--card-shadow-hover);
-    }
-    .metric-card h3 { color: var(--card-title); font-size: 0.85rem; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-    .metric-card h1 { color: var(--card-val); font-size: 2.2rem; margin: 5px 0 0 0; font-weight: 800; }
-    
-    .metric-blue h1 { background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .metric-purple h1 { background: linear-gradient(135deg, #c084fc, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .metric-amber h1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .metric-green h1 { background: linear-gradient(135deg, #34d399, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .metric-red h1 { background: linear-gradient(135deg, #f87171, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    
-    .hero-card {
-        background: var(--card-bg);
-        padding: 35px;
-        border-radius: 24px;
-        border: 1px solid var(--card-border);
-        box-shadow: 0 20px 40px var(--card-shadow);
-    }
-    
-    .feature-card {
-        text-align: center;
-        background: var(--feature-bg);
-        border-radius: 16px;
-        padding: 25px 15px;
-        border: 1px solid var(--card-border);
-    }
-    .feature-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--card-border-hover);
-        background: var(--card-bg-hover);
-        box-shadow: 0 10px 30px var(--card-shadow-hover);
-    }
-    .feature-title { color: var(--feature-title); font-weight: 700; margin: 10px 0 5px 0; font-size: 1.1rem; }
-    
-    .quality-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.8rem;
-    }
-    .quality-good { background: #065f46; color: #34d399; }
-    .quality-warning { background: #78350f; color: #fbbf24; }
-    .quality-bad { background: #7f1d1d; color: #f87171; }
-    
-    .insight-card {
-        background: var(--insight-bg);
-        color: var(--insight-text);
-        border-left: 4px solid #818cf8;
-        border-radius: 0 12px 12px 0;
-        padding: 15px;
-        margin: 8px 0;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] { gap: 4px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0 0; padding: 8px 16px; }
-    
-    div[data-testid="stMetric"] {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 12px;
-        padding: 15px;
-    }
-    div[data-testid="stMetric"] label, div[data-testid="stMetric"] div {
-        color: var(--card-val) !important;
-    }
-    /* ══════ Refined dashboard and responsive layout ══════ */
     html, body, [class*="css"] {
         font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
     }
     .stApp {
-        background: radial-gradient(ellipse at 12% 0%, #172440 0%, #0d1424 42%, #090e18 100%) !important;
+        color: var(--text);
+        background: radial-gradient(ellipse at 15% 0%, #15233a 0%, var(--page) 48%, #080e18 100%) !important;
     }
-    .main .block-container {
-        max-width: 1680px;
-        padding: 1.75rem clamp(1rem, 3vw, 2.75rem) 3rem;
-    }
-    .metric-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 14px;
-        margin: 16px 0 22px;
-    }
-    .metric-card {
-        min-width: 0;
-        min-height: 158px;
-        padding: 20px 12px;
-        border-radius: 20px;
-        background: linear-gradient(150deg, rgba(27, 39, 60, .96), rgba(19, 29, 47, .96));
-        border-color: rgba(148, 163, 184, .14);
-        box-shadow: 0 8px 24px rgba(2, 6, 18, .18);
-        animation: none;
-        transition: border-color .2s ease, background .2s ease;
-    }
-    .metric-card:hover {
-        transform: none;
-        background: linear-gradient(150deg, rgba(32, 47, 72, .98), rgba(22, 34, 55, .98));
-        border-color: rgba(96, 165, 250, .35);
-        box-shadow: 0 10px 26px rgba(2, 6, 18, .24);
-    }
-    .metric-card .mc-icon { font-size: 1.65rem; margin-bottom: 10px; }
-    .metric-card .mc-label { font-size: .7rem; letter-spacing: 1.2px; }
-    .metric-card .mc-value {
-        font-size: clamp(1.35rem, 2vw, 1.9rem);
-        overflow-wrap: anywhere;
-    }
-    .section-header { animation: none; margin: 22px 0 14px; flex-wrap: wrap; }
-    .section-header .sh-text { font-size: clamp(1.2rem, 2vw, 1.5rem); letter-spacing: -.02em; }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 5px;
-        overflow-x: auto;
-        scrollbar-width: thin;
-        background: rgba(16, 25, 41, .82);
-        border-color: rgba(148, 163, 184, .12);
-    }
-    .stTabs [data-baseweb="tab"] { white-space: nowrap; padding: 9px 14px; }
-    .stTabs [aria-selected="true"] {
-        background: rgba(96, 165, 250, .16) !important;
-        color: #bfdbfe !important;
-    }
-    .stButton > button, [data-testid="stDownloadButton"] button {
-        min-height: 42px;
-        border: 1px solid rgba(148, 163, 184, .2) !important;
-        transition: background .18s ease, border-color .18s ease !important;
-    }
-    .stButton > button:hover, [data-testid="stDownloadButton"] button:hover {
-        transform: none !important;
-        border-color: rgba(96, 165, 250, .55) !important;
-        box-shadow: 0 5px 16px rgba(2, 6, 18, .2) !important;
-    }
-    .stDataFrame, [data-testid="stTable"] {
-        border: 1px solid rgba(148, 163, 184, .14);
-        border-radius: 16px !important;
-        overflow: hidden;
-    }
+    .main .block-container { max-width: 1680px; padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem; }
+    footer { visibility: hidden; }
+    h1, h2, h3, h4 { color: var(--text); letter-spacing: -.025em; }
+    h1 { font-size: clamp(2rem, 4vw, 3.25rem) !important; }
+    h2 { font-size: clamp(1.25rem, 2.2vw, 1.65rem) !important; }
+    p, li, label { line-height: 1.6; }
+    a { color: var(--blue); }
+    ::selection { background: rgba(89, 198, 255, .28); }
 
-    /* ══════ Chat experience ══════ */
-    .chat-hero {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        margin: 8px 0 20px;
-        padding: 22px 24px;
-        border: 1px solid rgba(129, 140, 248, .18);
-        border-radius: 22px;
-        background: linear-gradient(110deg, rgba(25, 39, 62, .96), rgba(20, 29, 48, .82));
+    /* Welcome page */
+    .hero-wrapper { padding: 2.25rem 1rem 1.35rem; text-align: center; }
+    .hero-logo { display: block; margin-bottom: .5rem; font-size: 3.25rem; }
+    .hero-title {
+        margin: 0; color: var(--text); font-size: clamp(2.6rem, 6vw, 4.1rem); font-weight: 800;
+        letter-spacing: -.055em; background: linear-gradient(110deg, #8cddff, #a990ff 70%, #e0a8ff);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .chat-hero-icon {
-        flex: 0 0 54px;
-        width: 54px;
-        height: 54px;
-        display: grid;
-        place-items: center;
-        border: 1px solid rgba(129, 140, 248, .28);
-        border-radius: 17px;
-        background: linear-gradient(135deg, rgba(96, 165, 250, .2), rgba(192, 132, 252, .2));
-        font-size: 1.55rem;
+    .hero-subtitle { margin: .7rem 0 .25rem; color: #c5d3e4; font-size: 1.1rem; }
+    .hero-tagline { margin: 0; color: var(--muted); font-size: .95rem; }
+    .hero-card { padding: 1.5rem; border: 1px solid var(--border); border-radius: 22px; background: rgba(17, 27, 45, .86); box-shadow: var(--shadow); }
+    .feature-card {
+        min-height: 150px; height: 100%; padding: 1.2rem; text-align: left;
+        border: 1px solid var(--border); border-radius: var(--radius); background: rgba(17, 27, 45, .72);
     }
-    .chat-hero-copy { flex: 1; min-width: 0; }
-    .chat-hero-kicker {
-        margin: 0 0 4px;
-        color: #8b9bb3;
-        font-size: .68rem;
-        font-weight: 700;
-        letter-spacing: .14em;
-        text-transform: uppercase;
+    .feature-icon { font-size: 1.7rem; }
+    .feature-title { margin: .65rem 0 .3rem; color: var(--text); font-weight: 700; }
+    .feature-desc { color: var(--muted); font-size: .82rem; line-height: 1.55; }
+
+    /* Shared surfaces */
+    .section-header { display:flex; align-items:center; gap:.75rem; margin:1.65rem 0 1rem; flex-wrap:wrap; }
+    .section-header .sh-icon { font-size:1.4rem; }
+    .section-header .sh-text { margin:0; color:var(--text); font-size:1.35rem; font-weight:750; }
+    .section-header .sh-badge { padding:.28rem .62rem; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:.66rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+    .metric-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin:1rem 0 1.6rem; }
+    .metric-card {
+        min-width:0; min-height:145px; padding:1.15rem .8rem; text-align:center;
+        border:1px solid var(--border); border-radius:18px; background:linear-gradient(145deg,rgba(24,37,58,.98),rgba(17,27,45,.98));
+        box-shadow:0 8px 22px rgba(1,7,18,.15);
     }
-    .chat-hero-title { margin: 0; color: #f1f5f9; font-size: 1.35rem; font-weight: 750; }
-    .chat-hero-subtitle { margin: 4px 0 0; color: #9baec7; font-size: .88rem; }
-    .chat-model-chip {
-        flex: 0 0 auto;
-        padding: 7px 11px;
-        border: 1px solid rgba(52, 211, 153, .22);
-        border-radius: 999px;
-        background: rgba(16, 185, 129, .08);
-        color: #6ee7b7;
-        font-size: .7rem;
-        font-weight: 700;
-        letter-spacing: .06em;
-    }
-    .chat-status {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 0 0 16px;
-        padding: 12px 15px;
-        border: 1px solid rgba(148, 163, 184, .15);
-        border-radius: 14px;
-        background: rgba(17, 27, 45, .72);
-        color: #b7c5d8;
-        font-size: .88rem;
-    }
-    .chat-status-ready { border-color: rgba(52, 211, 153, .2); }
-    .chat-status-warn { border-color: rgba(251, 191, 36, .24); }
-    .chat-status-offline { border-color: rgba(251, 113, 133, .22); }
-    .chat-welcome {
-        max-width: 820px;
-        margin: 26px auto;
-        padding: clamp(28px, 5vw, 54px) 24px;
-        background: linear-gradient(145deg, rgba(25, 39, 62, .96), rgba(17, 27, 45, .96));
-        border: 1px solid rgba(129, 140, 248, .2);
-        border-radius: 24px;
-        box-shadow: 0 18px 48px rgba(2, 6, 18, .22);
-        color: #a9b8ce;
-    }
-    .chat-welcome-icon {
-        width: 64px;
-        height: 64px;
-        display: grid;
-        place-items: center;
-        margin: 0 auto 18px;
-        border-radius: 20px;
-        background: linear-gradient(135deg, rgba(96, 165, 250, .18), rgba(192, 132, 252, .18));
-        border: 1px solid rgba(129, 140, 248, .25);
-        font-size: 2rem;
-        animation: none;
-    }
-    [data-testid="stChatMessage"] {
-        max-width: 900px;
-        margin: 12px auto;
-        padding: 16px 18px;
-        border: 1px solid rgba(148, 163, 184, .12);
-        border-radius: 18px;
-        background: rgba(19, 29, 47, .78);
-    }
-    [data-testid="stChatMessage"] p { line-height: 1.7; }
-    [data-testid="stChatInput"] {
-        max-width: 940px;
-        margin: 12px auto 0;
-    }
-    [data-testid="stChatInput"] textarea {
-        border: 1px solid rgba(129, 140, 248, .28) !important;
-        border-radius: 16px !important;
-        background: rgba(17, 27, 45, .96) !important;
-        line-height: 1.5;
-    }
-    [data-testid="stChatInput"] textarea:focus {
-        border-color: rgba(96, 165, 250, .75) !important;
-        box-shadow: 0 0 0 3px rgba(96, 165, 250, .12) !important;
-    }
-    @media (max-width: 1250px) {
-        .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
+    .metric-card:hover { border-color:var(--border-strong); background:linear-gradient(145deg,#1b2b43,#152238); }
+    .metric-card::before { display:none; }
+    .metric-card .mc-icon { display:block; margin-bottom:.6rem; font-size:1.45rem; }
+    .metric-card .mc-label { margin:0; color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
+    .metric-card .mc-value { margin:.35rem 0 0; font-size:clamp(1.25rem,1.8vw,1.8rem); font-weight:800; line-height:1.15; overflow-wrap:anywhere; }
+    .mc-blue .mc-value { color:var(--blue); background:none; -webkit-text-fill-color:currentColor; }
+    .mc-violet .mc-value, .mc-purple .mc-value { color:var(--violet); background:none; -webkit-text-fill-color:currentColor; }
+    .mc-emerald .mc-value { color:var(--mint); background:none; -webkit-text-fill-color:currentColor; }
+    .mc-amber .mc-value { color:var(--amber); background:none; -webkit-text-fill-color:currentColor; }
+    .mc-rose .mc-value { color:var(--rose); background:none; -webkit-text-fill-color:currentColor; }
+    .insight-card { margin:.7rem 0; padding:.95rem 1.1rem; border:1px solid var(--border); border-left:3px solid var(--violet); border-radius:12px; background:rgba(17,27,45,.82); color:#d5dfec; line-height:1.6; }
+    .insight-success { border-left-color:var(--mint); }
+    .insight-warning { border-left-color:var(--amber); }
+    .insight-danger { border-left-color:var(--rose); }
+    .quality-badge { display:inline-flex; padding:.4rem .75rem; border-radius:999px; font-size:.78rem; font-weight:700; }
+    .quality-good { color:var(--mint); background:rgba(72,214,176,.1); border:1px solid rgba(72,214,176,.24); }
+    .quality-warning { color:var(--amber); background:rgba(255,199,106,.1); border:1px solid rgba(255,199,106,.24); }
+    .quality-bad { color:var(--rose); background:rgba(255,130,150,.1); border:1px solid rgba(255,130,150,.24); }
+    .quality-ring { width:112px; height:112px; margin:.3rem auto; display:grid; place-items:center; border-radius:50%; }
+    .quality-ring-inner { width:84px; height:84px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:50%; background:var(--surface); }
+    .quality-ring-value { font-size:1.7rem; font-weight:800; line-height:1; }
+    .quality-ring-label { margin-top:.25rem; color:var(--quiet); font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .stat-pill { display:inline-flex; padding:.4rem .7rem; border:1px solid var(--border); border-radius:999px; color:var(--muted); background:var(--surface); font-size:.77rem; }
+    .audit-item { display:flex; gap:.7rem; align-items:center; margin:.45rem 0; padding:.7rem .85rem; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+    .audit-num { width:24px; height:24px; display:grid; place-items:center; flex:none; border-radius:50%; color:#091321; background:var(--blue); font-size:.7rem; font-weight:800; }
+    .audit-text { color:#c2cfdf; font-size:.86rem; }
+    .empty-state { padding:3rem 1.5rem; text-align:center; color:var(--muted); }
+    .empty-state .es-icon { display:block; margin-bottom:.75rem; font-size:2.5rem; }
+    .empty-state .es-title { color:var(--text); font-size:1.15rem; font-weight:700; }
+    .empty-state .es-desc { max-width:450px; margin:.4rem auto; font-size:.9rem; line-height:1.6; }
+    .lb-winner { padding:1.3rem; border:1px solid rgba(89,198,255,.25); border-radius:16px; background:linear-gradient(120deg,rgba(89,198,255,.08),rgba(169,144,255,.1)); text-align:center; }
+    .lb-winner-title { color:var(--muted); font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .lb-winner-name { margin:.35rem 0; color:#b9eaff; font-size:1.45rem; font-weight:800; }
+    .lb-winner-score { color:var(--mint); font-weight:700; }
+
+    /* Controls and data tables */
+    section[data-testid="stSidebar"] { background:#0e1727 !important; border-right:1px solid var(--border); }
+    section[data-testid="stSidebar"] h3 { color:#b9eaff !important; }
+    div[data-testid="stMetric"] { min-height:100px; padding:.95rem 1rem; border:1px solid var(--border); border-radius:15px; background:var(--surface); }
+    div[data-testid="stMetric"] label { color:var(--muted) !important; font-size:.72rem !important; font-weight:700 !important; }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] { color:var(--text) !important; font-weight:750 !important; }
+    .stButton > button, [data-testid="stDownloadButton"] button { min-height:42px; border:1px solid var(--border-strong) !important; border-radius:12px !important; font-weight:650 !important; transition:background .18s ease,border-color .18s ease !important; }
+    .stButton > button:hover, [data-testid="stDownloadButton"] button:hover { transform:none !important; border-color:rgba(89,198,255,.55) !important; box-shadow:0 6px 18px rgba(1,7,18,.18) !important; }
+    button[kind="primary"] { border-color:rgba(89,198,255,.35) !important; background:linear-gradient(115deg,#227cb0,#5a64b5) !important; color:#fff !important; }
+    [data-baseweb="select"] > div, [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, [data-testid="stTextArea"] textarea { border-color:var(--border-strong) !important; border-radius:11px !important; background:#101a2b !important; }
+    [data-testid="stFileUploaderDropzone"] { border:1px dashed rgba(148,163,184,.3); border-radius:15px; background:rgba(17,27,45,.62); }
+    [data-testid="stFileUploaderDropzone"]:hover { border-color:rgba(89,198,255,.55); background:rgba(23,36,58,.78); }
+    [data-testid="stDataFrame"], [data-testid="stTable"] { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
+    [data-testid="stExpander"] { border:1px solid var(--border); border-radius:14px; background:rgba(17,27,45,.6); }
+    hr { border-color:var(--border) !important; }
+    [data-testid="stAlert"] { border-radius:13px; }
+    [data-testid="stProgressBar"] > div > div { background:linear-gradient(90deg,var(--blue),var(--violet)); }
+
+    /* Chat workspace */
+    .chat-hero { display:flex; align-items:center; gap:1rem; margin:.4rem 0 1rem; padding:1.15rem 1.25rem; border:1px solid rgba(169,144,255,.2); border-radius:18px; background:linear-gradient(110deg,rgba(25,39,62,.98),rgba(17,27,45,.95)); }
+    .chat-hero-icon { width:48px; height:48px; display:grid; place-items:center; flex:none; border:1px solid rgba(169,144,255,.25); border-radius:15px; background:rgba(169,144,255,.12); font-size:1.45rem; }
+    .chat-hero-copy { flex:1; min-width:0; }
+    .chat-hero-kicker { margin:0 0 .2rem; color:var(--blue); font-size:.65rem; font-weight:750; letter-spacing:.13em; text-transform:uppercase; }
+    .chat-hero-title { margin:0; color:var(--text); font-size:1.25rem; font-weight:750; }
+    .chat-hero-subtitle { margin:.25rem 0 0; color:var(--muted); font-size:.84rem; }
+    .chat-model-chip { flex:none; padding:.4rem .65rem; border:1px solid rgba(72,214,176,.25); border-radius:999px; color:var(--mint); background:rgba(72,214,176,.08); font-size:.65rem; font-weight:750; letter-spacing:.06em; }
+    .chat-status { display:flex; align-items:center; gap:.55rem; margin:0 0 .8rem; padding:.7rem .9rem; border:1px solid var(--border); border-radius:12px; color:#bfccdc; background:rgba(17,27,45,.78); font-size:.83rem; }
+    .chat-status-ready { border-color:rgba(72,214,176,.22); }
+    .chat-status-warn { border-color:rgba(255,199,106,.23); }
+    .chat-status-offline { border-color:rgba(255,130,150,.22); }
+    .chat-welcome { max-width:760px; margin:1.6rem auto; padding:2rem 1.3rem; border:1px solid rgba(169,144,255,.18); border-radius:20px; background:linear-gradient(145deg,#17243a,#111b2d); color:var(--muted); text-align:center; }
+    .chat-welcome-icon { display:grid; place-items:center; width:58px; height:58px; margin:0 auto 1rem; border:1px solid rgba(169,144,255,.24); border-radius:18px; background:rgba(169,144,255,.1); font-size:1.8rem; }
+    [data-testid="stChatMessage"] { max-width:900px; margin:.65rem auto; padding:.85rem 1rem; border:1px solid var(--border); border-radius:15px; background:rgba(17,27,45,.82); }
+    [data-testid="stChatMessage"] p { line-height:1.7; }
+    [data-testid="stChatInput"] { max-width:940px; margin:.75rem auto 0; }
+    [data-testid="stChatInput"] textarea { border:1px solid rgba(169,144,255,.28) !important; border-radius:14px !important; background:#101a2b !important; line-height:1.5; }
+    [data-testid="stChatInput"] textarea:focus { border-color:var(--blue) !important; box-shadow:0 0 0 3px rgba(89,198,255,.12) !important; }
+
+    @media (max-width: 1150px) { .metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
     @media (max-width: 700px) {
-        .main .block-container { padding: 1rem .75rem 2rem; }
-        .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        .metric-card { min-height: 132px; padding: 16px 8px; }
-        .stTabs [data-baseweb="tab"] { padding: 8px 10px; font-size: .78rem; }
-        [data-testid="stChatMessage"] { padding: 12px; }
-        .chat-hero { align-items: flex-start; padding: 17px; gap: 12px; flex-wrap: wrap; }
-        .chat-model-chip { margin-left: 66px; }
-        .chat-hero-title { font-size: 1.15rem; }
+        .main .block-container { padding:1rem .75rem 2rem; }
+        .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
+        .metric-card { min-height:126px; padding:.95rem .45rem; }
+        .hero-wrapper { padding:1.5rem .5rem 1rem; }
+        .hero-card { padding:1rem; }
+        .feature-card { min-height:130px; }
+        .chat-hero { align-items:flex-start; flex-wrap:wrap; padding:1rem; }
+        .chat-model-chip { margin-left:3.7rem; }
+        .chat-hero-title { font-size:1.08rem; }
+        [data-testid="stChatMessage"] { padding:.7rem; }
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ─── Session State ───
-if "df" not in st.session_state:
-    st.session_state.df = None
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "trained_model" not in st.session_state:
-    st.session_state.trained_model = None
-if "model_info" not in st.session_state:
-    st.session_state.model_info = {}
-if "cleaning_log" not in st.session_state:
-    st.session_state.cleaning_log = []
+defaults = {
+    "df": None,
+    "messages": [],
+    "trained_model": None,
+    "model_info": {},
+    "cleaning_log": [],
+    "filename": "Dataset",
+    "dataset_profile": None,
+    "export_payload": None,
+    "loaded_upload_signature": None
+}
+for key, val in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # ─── Helper Functions ───
+def safe_html_text(value):
+    """Escape user data while retaining only the simple formatting tags we emit."""
+    escaped = escape(str(value))
+    for tag in ("b", "strong", "br", "code", "i"):
+        escaped = escaped.replace(f"&lt;{tag}&gt;", f"<{tag}>")
+        escaped = escaped.replace(f"&lt;/{tag}&gt;", f"</{tag}>")
+    return escaped
+
+
+def set_dataset(dataframe, reset_ui=False):
+    """Replace the active dataset and invalidate derived state."""
+    st.session_state.df = dataframe
+    st.session_state.dataset_profile = None
+    st.session_state.export_payload = None
+    st.session_state.trained_model = None
+    st.session_state.model_info = {}
+    st.session_state.messages = []
+    if reset_ui:
+        for widget_key in (
+            "automl_feats", "eda_chart_col", "scatter_multi", "iso_cols",
+            "outlier_col", "type_conv_col", "iqr_col", "zscore_col",
+        ):
+            st.session_state.pop(widget_key, None)
+        st.session_state.active_workspace = "Overview"
+
+
+def get_dataset_profile(df):
+    """Compute expensive dataset-wide counts once for the current dataframe."""
+    cached = st.session_state.get("dataset_profile")
+    if cached and cached["data_id"] == id(df):
+        return cached
+
+    def build_profile():
+        missing_by_column = df.isna().sum()
+        missing_total = int(missing_by_column.sum())
+        duplicate_scan_skipped = len(df) > 1_000_000
+        duplicate_total = None if duplicate_scan_skipped else (int(df.duplicated().sum()) if len(df) else 0)
+        total_cells = df.shape[0] * df.shape[1]
+        missing_pct = (missing_total / total_cells * 100) if total_cells else 0
+        duplicate_pct = (duplicate_total / len(df) * 100) if len(df) and duplicate_total is not None else 0
+        quality = max(0, min(100, int(100 - missing_pct * 1.5 - duplicate_pct * 2)))
+        return {
+            "data_id": id(df),
+            "missing_by_column": missing_by_column,
+            "missing_total": missing_total,
+            "duplicate_total": duplicate_total,
+            "duplicate_scan_skipped": duplicate_scan_skipped,
+            "quality": quality,
+            "memory_mb": df.memory_usage(deep=True).sum() / (1024 * 1024),
+            "numeric_columns": df.select_dtypes(include=np.number).columns.tolist(),
+            "categorical_columns": df.select_dtypes(exclude=np.number).columns.tolist(),
+            "eda_describe": None,
+        }
+
+    if len(df) >= 100_000:
+        with st.spinner("Profiling this large dataset once…"):
+            profile = build_profile()
+    else:
+        profile = build_profile()
+    st.session_state.dataset_profile = profile
+    return profile
+
+
+def get_eda_describe(df):
+    """Keep descriptive statistics across widget reruns for the same dataset."""
+    profile = get_dataset_profile(df)
+    if profile["eda_describe"] is None:
+        profile["eda_describe"] = df.describe(include="all").T
+    return profile["eda_describe"]
+
+
+def get_chat_data_summary(df):
+    """Build and reuse a compact summary so chat never scans a large dataset per turn."""
+    profile = get_dataset_profile(df)
+    if "chat_summary" not in profile:
+        is_sampled = len(df) > 100_000
+        summary_df = df.sample(n=100_000, random_state=42) if is_sampled else df
+        stats_text = []
+        for col in df.columns:
+            try:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    values = summary_df[col].dropna()
+                    if len(values):
+                        stats_text.append(
+                            f"- '{col}' (Numeric): Mean={values.mean():.2f}, "
+                            f"Median={values.median():.2f}, Min={values.min():.2f}, "
+                            f"Max={values.max():.2f}, Std={values.std():.2f}"
+                        )
+                else:
+                    counts = summary_df[col].value_counts().head(5)
+                    top_values = ", ".join(f"{value}: {count}" for value, count in counts.items())
+                    stats_text.append(f"- '{col}' (Categorical): Top values: {top_values}")
+            except Exception:
+                stats_text.append(f"- '{col}': [summary unavailable]")
+        missing = profile["missing_by_column"]
+        missing_text = ", ".join(f"{col}: {int(count)}" for col, count in missing.items() if count) or "None"
+        profile["chat_summary"] = {
+            "columns": "\n".join(stats_text),
+            "missing": missing_text,
+            "sampling_note": (
+                f"Column statistics are estimates based on a reproducible 100,000-row sample from {len(df):,} rows."
+                if is_sampled else "Column statistics use all rows."
+            ),
+        }
+    return profile["chat_summary"]
+
+
 def load_data(file):
+    """Load data from uploaded file with robust error handling."""
     try:
-        if file.name.endswith('.csv'):
-            st.session_state.df = pd.read_csv(file)
-        elif file.name.endswith('.json'):
-            st.session_state.df = pd.read_json(file)
-        else:
-            st.session_state.df = pd.read_excel(file)
+        signature = (
+            file.name,
+            getattr(file, "size", None),
+            getattr(file, "file_id", None),
+        )
+        if signature == st.session_state.loaded_upload_signature:
+            return
+        name = file.name.lower()
+        with st.spinner("Loading and preparing your dataset…"):
+            if name.endswith('.csv'):
+                dataframe = pd.read_csv(file)
+            elif name.endswith('.json'):
+                dataframe = pd.read_json(file)
+            elif name.endswith(('.xlsx', '.xls')):
+                dataframe = pd.read_excel(file)
+            else:
+                st.error(f"Unsupported file format: {file.name}")
+                return
+        set_dataset(dataframe, reset_ui=True)
         st.session_state.filename = file.name
+        st.session_state.loaded_upload_signature = signature
         st.session_state.cleaning_log = []
         st.session_state.trained_model = None
         st.session_state.model_info = {}
         st.session_state.messages = []
         st.rerun()
     except Exception as e:
-        st.error(f"Error loading file: {e}")
+        st.error(f"❌ Error loading file: {e}")
+
+def compute_quality_score(df):
+    """Return the cached quality score for the active dataset."""
+    return get_dataset_profile(df)["quality"]
+
 
 @st.cache_data(show_spinner=False)
 def load_sample_dataset(name):
-    \"\"\"Load and cache a sample dataset on demand.\"\"\"
+    """Load an optional sample dataset only when the user requests it."""
     import seaborn as sns
     return sns.load_dataset(name)
-
-
-def compute_quality_score(df):
-    total_cells = df.shape[0] * df.shape[1]
-    missing_pct = (df.isnull().sum().sum() / total_cells) * 100 if total_cells > 0 else 0
-    dup_pct = (df.duplicated().sum() / df.shape[0]) * 100 if df.shape[0] > 0 else 0
-    return max(0, min(100, int(100 - (missing_pct * 1.5) - (dup_pct * 2))))
 
 def auto_select_chart(series, col_name):
     """Automatically select the best chart type based on column data."""
     if pd.api.types.is_numeric_dtype(series):
-        skew = series.dropna().skew()
         nunique = series.nunique()
         if nunique <= 10:
             return "bar"
-        elif abs(skew) > 1:
-            return "box"
-        else:
-            return "histogram"
+        try:
+            skew = series.dropna().skew()
+            if abs(skew) > 1:
+                return "box"
+        except Exception:
+            pass
+        return "histogram"
     else:
         nunique = series.nunique()
         if nunique <= 15:
             return "bar"
-        else:
-            return "treemap"
+        return "treemap"
 
 def detect_problem_type(y):
-    """Section 18: Auto-detect classification vs regression."""
+    """Auto-detect classification vs regression."""
     if y.dtype == 'object' or str(y.dtype) == 'category':
         return 'classification'
     nunique = y.nunique()
@@ -415,132 +386,197 @@ def detect_problem_type(y):
     return 'regression'
 
 def suggest_target(df):
-    """Section 17: Auto-suggest likely target columns."""
+    """Auto-suggest likely target columns."""
     target_keywords = ['target', 'label', 'class', 'survived', 'outcome', 'result', 'y', 'price', 'salary', 'revenue']
     for col in df.columns:
         if col.lower().strip() in target_keywords:
             return col
-    # Pick the last column as default
     return df.columns[-1]
 
-# ══════════════════════════════════════
-# PAGE 1: LANDING PAGE (Section 6)
-# ══════════════════════════════════════
+def safe_numeric_stat(series, stat_func):
+    """Safely compute a numeric statistic, returning None on failure."""
+    try:
+        if pd.api.types.is_numeric_dtype(series):
+            val = stat_func(series.dropna())
+            if pd.notna(val) and np.isfinite(val):
+                return val
+    except Exception:
+        pass
+    return None
+
+def get_df_download(df, fmt="csv"):
+    """Convert df to downloadable bytes."""
+    buf = io.BytesIO()
+    if fmt == "csv":
+        df.to_csv(buf, index=False)
+    elif fmt == "excel":
+        df.to_excel(buf, index=False, engine='openpyxl')
+    buf.seek(0)
+    return buf.getvalue()
+
+def render_metric_card(icon, label, value, color_class="mc-blue"):
+    """Render a styled metric card."""
+    return f"""<div class='metric-card {color_class}'>
+        <span class='mc-icon'>{safe_html_text(icon)}</span>
+        <p class='mc-label'>{safe_html_text(label)}</p>
+        <p class='mc-value'>{safe_html_text(value)}</p>
+    </div>"""
+
+def render_section_header(icon, text, badge=""):
+    """Render a styled section header."""
+    badge_html = f"<span class='sh-badge'>{safe_html_text(badge)}</span>" if badge else ""
+    st.markdown(f"""<div class='section-header'>
+        <span class='sh-icon'>{safe_html_text(icon)}</span>
+        <h2 class='sh-text'>{safe_html_text(text)}</h2>
+        {badge_html}
+    </div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════
+# PAGE 1: LANDING PAGE
+# ══════════════════════════════════════════════
 if st.session_state.df is None:
-    st.markdown("<br>", unsafe_allow_html=True)
-    
     col_l, col_c, col_r = st.columns([1, 3, 1])
     with col_c:
         st.markdown("""
-        <div style='text-align: center; padding: 40px 0 20px 0;'>
-            <h1 style='font-size: 3.5rem; background: linear-gradient(135deg, #38BDF8, #818CF8, #C084FC); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px;'>🚀 DataPilot AI</h1>
-            <p style='color: #94A3B8; font-size: 1.2rem; font-weight: 300;'>Upload. Analyze. Predict. Understand.</p>
-            <p style='color: #64748B; font-size: 0.9rem;'>Your AI-Powered Data Scientist</p>
+        <div class='hero-wrapper'>
+            <span class='hero-logo'>🚀</span>
+            <h1 class='hero-title'>DataPilot AI</h1>
+            <p class='hero-subtitle'>Upload · Analyze · Predict · Understand</p>
+            <p class='hero-tagline'>Your intelligent, local-first data science copilot</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class='hero-card'>
-        """, unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader("Upload your CSV, Excel, or JSON dataset", type=["csv", "xlsx", "xls", "json"])
+
+        uploaded_file = st.file_uploader(
+            "Drop your dataset here — CSV, Excel, or JSON",
+            type=["csv", "xlsx", "xls", "json"],
+            help="Supports files up to 200MB. Data stays local."
+        )
         if uploaded_file is not None:
             load_data(uploaded_file)
-            
+
         st.divider()
-        st.markdown("<p style='text-align: center; color: #64748B;'>Or try it instantly with popular datasets:</p>", unsafe_allow_html=True)
-        
+        st.markdown("<p style='text-align: center; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;'>Quick start · Load a sample dataset</p>", unsafe_allow_html=True)
+
         c1, c2, c3 = st.columns(3)
-        with c1:
-            if st.button("🚢 Titanic (Classification)", use_container_width=True):
-                st.session_state.df = load_sample_dataset('titanic')
-                st.session_state.filename = "titanic.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-        with c2:
-            if st.button("🌸 Iris (Clustering/Class)", use_container_width=True):
-                st.session_state.df = load_sample_dataset('iris')
-                st.session_state.filename = "iris.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-        with c3:
-            if st.button("🐧 Penguins (Multi-class)", use_container_width=True):
-                st.session_state.df = load_sample_dataset('penguins')
-                st.session_state.filename = "penguins.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-                
+        datasets = [
+            (c1, "🚢", "Titanic", "Classification", 'titanic', "titanic.csv"),
+            (c2, "🌸", "Iris", "Multi-class", 'iris', "iris.csv"),
+            (c3, "🐧", "Penguins", "Multi-class", 'penguins', "penguins.csv"),
+        ]
+        for col, emoji, name, task, sns_name, fname in datasets:
+            with col:
+                if st.button(f"{emoji} {name} ({task})", use_container_width=True, key=f"sample_{sns_name}"):
+                    set_dataset(load_sample_dataset(sns_name), reset_ui=True)
+                    st.session_state.filename = fname
+                    st.session_state.cleaning_log = []
+                    st.session_state.trained_model = None
+                    st.session_state.model_info = {}
+                    st.rerun()
+
         c4, c5, c6 = st.columns(3)
-        with c4:
-            if st.button("💎 Diamonds (Regression)", use_container_width=True):
-                st.session_state.df = load_sample_dataset('diamonds')
-                st.session_state.filename = "diamonds.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-        with c5:
-            if st.button("🏥 Breast Cancer (sklearn)", use_container_width=True):
-                from sklearn.datasets import load_breast_cancer
-                data = load_breast_cancer(as_frame=True)
-                st.session_state.df = data.frame
-                st.session_state.filename = "breast_cancer.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-        with c6:
-            if st.button("🏠 California Housing", use_container_width=True):
-                from sklearn.datasets import fetch_california_housing
-                data = fetch_california_housing(as_frame=True)
-                st.session_state.df = data.frame
-                st.session_state.filename = "california_housing.csv"
-                st.session_state.cleaning_log = []
-                st.rerun()
-                
-        st.markdown("</div>", unsafe_allow_html=True)
-        
+        datasets2 = [
+            (c4, "💎", "Diamonds", "Regression", 'diamonds', "diamonds.csv"),
+            (c5, "🏥", "Breast Cancer", "Binary Class", None, "breast_cancer.csv"),
+            (c6, "🏠", "California Housing", "Regression", None, "california_housing.csv"),
+        ]
+        for col, emoji, name, task, sns_name, fname in datasets2:
+            with col:
+                if st.button(f"{emoji} {name} ({task})", use_container_width=True, key=f"sample_{fname}"):
+                    if sns_name:
+                        set_dataset(load_sample_dataset(sns_name), reset_ui=True)
+                    elif fname == "breast_cancer.csv":
+                        from sklearn.datasets import load_breast_cancer
+                        data = load_breast_cancer(as_frame=True)
+                        set_dataset(data.frame, reset_ui=True)
+                    elif fname == "california_housing.csv":
+                        from sklearn.datasets import fetch_california_housing
+                        data = fetch_california_housing(as_frame=True)
+                        set_dataset(data.frame, reset_ui=True)
+                    st.session_state.filename = fname
+                    st.session_state.cleaning_log = []
+                    st.session_state.trained_model = None
+                    st.session_state.model_info = {}
+                    st.rerun()
+
         # Feature highlights
         st.markdown("<br>", unsafe_allow_html=True)
         f1, f2, f3, f4 = st.columns(4)
         features = [
-            ("📊", "Auto EDA", "Smart charts & stats"),
-            ("🤖", "AutoML", "Multi-model training"),
-            ("🔍", "SHAP", "Explainable AI"),
-            ("💬", "AI Chat", "Ask your dataset")
+            ("📊", "Smart EDA", "Auto-charts, distributions, correlations & statistical profiling"),
+            ("🤖", "AutoML Arena", "Train 6+ models, cross-validate & rank on a live leaderboard"),
+            ("🔍", "Explainable AI", "SHAP values & feature importance for transparent decisions"),
+            ("💬", "Data Chatbot", "Ask questions in plain English — powered by local LLM"),
         ]
-        for col, (icon, title, desc) in zip([f1,f2,f3,f4], features):
+        for col, (icon, title, desc) in zip([f1, f2, f3, f4], features):
             col.markdown(f"""<div class='feature-card'>
-                <div style='font-size:2rem;'>{icon}</div>
+                <span class='feature-icon'>{icon}</span>
                 <div class='feature-title'>{title}</div>
-                <div style='color:#64748b; font-size:0.8rem;'>{desc}</div>
+                <div class='feature-desc'>{desc}</div>
             </div>""", unsafe_allow_html=True)
 
-# ══════════════════════════════════════
+# ══════════════════════════════════════════════
 # PAGE 2: ANALYSIS DASHBOARD
-# ══════════════════════════════════════
+# ══════════════════════════════════════════════
 else:
     df = st.session_state.df
-    
+
     # ── Sidebar ──
     with st.sidebar:
         st.markdown("### 🚀 DataPilot AI")
-        st.success(f"**{st.session_state.get('filename', 'Dataset')}**")
-        
-        # Quick stats
-        quality = compute_quality_score(df)
+        st.markdown(f"**📁 {st.session_state.get('filename', 'Dataset')}**")
+
+        # Quality Score
+        profile = get_dataset_profile(df)
+        quality = profile["quality"]
         if quality >= 80:
-            badge = "quality-good"
+            badge_cls = "quality-good"
+            badge_icon = "✅"
         elif quality >= 50:
-            badge = "quality-warning"
+            badge_cls = "quality-warning"
+            badge_icon = "⚠️"
         else:
-            badge = "quality-bad"
-        st.markdown(f"Data Quality: <span class='quality-badge {badge}'>{quality}/100</span>", unsafe_allow_html=True)
-        
-        st.caption(f"{df.shape[0]:,} rows × {df.shape[1]} columns")
-        st.caption(f"Memory: {df.memory_usage(deep=True).sum() / 1024 / 1024:.1f} MB")
-        
+            badge_cls = "quality-bad"
+            badge_icon = "🔴"
+        st.markdown(f"<span class='quality-badge {badge_cls}'>{badge_icon} Quality: {quality}/100</span>", unsafe_allow_html=True)
+
+        st.caption(f"📐 {df.shape[0]:,} rows × {df.shape[1]} columns")
+        st.caption(f"💾 Memory: {profile['memory_mb']:.1f} MB")
+
         st.divider()
-        new_file = st.file_uploader("Upload New Dataset", type=["csv", "xlsx", "json"], key="sidebar_upload")
+
+        # Data Export
+        st.markdown("##### 📥 Export Data")
+        export_format = st.selectbox("File format", ["CSV", "Excel"], key="export_format")
+        if st.button("Prepare export", use_container_width=True, key="prepare_export"):
+            fmt = "csv" if export_format == "CSV" else "excel"
+            with st.spinner(f"Preparing {export_format} download…"):
+                try:
+                    st.session_state.export_payload = {
+                        "data_id": id(df),
+                        "format": export_format,
+                        "data": get_df_download(df, fmt),
+                    }
+                except Exception as exc:
+                    st.error(f"Could not create {export_format} export: {exc}")
+        export_payload = st.session_state.get("export_payload")
+        if export_payload and export_payload["data_id"] == id(df):
+            is_csv = export_payload["format"] == "CSV"
+            st.download_button(
+                f"Download {export_payload['format']}",
+                data=export_payload["data"],
+                file_name=f"datapilot_export.{'csv' if is_csv else 'xlsx'}",
+                mime="text/csv" if is_csv else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                on_click="ignore",
+            )
+
+        st.divider()
+
+        new_file = st.file_uploader("📂 Upload New Dataset", type=["csv", "xlsx", "json"], key="sidebar_upload")
         if new_file is not None:
             load_data(new_file)
-        
+
         st.divider()
         if st.button("🔄 Reset App", type="secondary", use_container_width=True):
             for key in list(st.session_state.keys()):
@@ -548,283 +584,495 @@ else:
             st.rerun()
 
     # ── Header ──
-    st.markdown(f"## 📊 {st.session_state.get('filename', 'Dataset')}")
-    
-    # ── Metric Cards (Section 8) ──
-    num_cols_list = df.select_dtypes(include=np.number).columns.tolist()
-    cat_cols_list = df.select_dtypes(exclude=np.number).columns.tolist()
-    missing_total = df.isnull().sum().sum()
-    
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Rows", f"{df.shape[0]:,}")
-    m2.metric("Columns", df.shape[1])
-    m3.metric("Numerical", len(num_cols_list))
-    m4.metric("Categorical", len(cat_cols_list))
-    m5.metric("Missing", f"{missing_total:,}")
-    
+    st.markdown(f"""<div class='section-header' style='margin-top: 0;'>
+        <span class='sh-icon'>📊</span>
+        <h2 class='sh-text'>{safe_html_text(st.session_state.get('filename', 'Dataset'))}</h2>
+        <span class='sh-badge'>Live Analysis</span>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Metric Cards ──
+    profile = get_dataset_profile(df)
+    num_cols_list = profile["numeric_columns"]
+    cat_cols_list = profile["categorical_columns"]
+    missing_total = profile["missing_total"]
+    dup_total = profile["duplicate_total"]
+
+    metrics_html = f"""<div class='metric-grid'>
+        {render_metric_card("📋", "Rows", f"{df.shape[0]:,}", "mc-blue")}
+        {render_metric_card("📊", "Columns", str(df.shape[1]), "mc-violet")}
+        {render_metric_card("🔢", "Numerical", str(len(num_cols_list)), "mc-emerald")}
+        {render_metric_card("🏷️", "Categorical", str(len(cat_cols_list)), "mc-purple")}
+        {render_metric_card("⚠️", "Missing", f"{missing_total:,}", "mc-amber" if missing_total > 0 else "mc-emerald")}
+        {render_metric_card("🔁", "Duplicates", f"{dup_total:,}" if dup_total is not None else "Skipped", "mc-rose" if dup_total else "mc-amber" if dup_total is None else "mc-emerald")}
+    </div>"""
+    st.markdown(metrics_html, unsafe_allow_html=True)
+    if profile["duplicate_scan_skipped"]:
+        st.caption("Automatic duplicate scanning is skipped above 1 million rows to protect memory. You can still remove duplicates explicitly in Cleaning.")
+
     # ── Main Tabs ──
-    tabs = st.tabs([
-        "📋 Overview & Quality",
-        "🧹 Data Cleaning",
-        "📊 EDA & Auto-Charts",
-        "📈 Statistical Tests",
-        "🤖 AutoML & Leaderboard",
-        "🔮 Prediction Playground",
-        "🔍 Anomaly Detection",
-        "💡 AI Insights",
-        "💬 AI Chatbot"
-    ])
-    
+    st.caption("WORKSPACE")
+    workspaces = [
+        "Overview", "Cleaning", "Explore", "Statistics", "AutoML",
+        "Predict", "Anomalies", "Insights", "AI Chat",
+    ]
+    active_workspace = st.selectbox(
+        "Workspace",
+        workspaces,
+        key="active_workspace",
+        label_visibility="collapsed",
+    )
+
     # ═══════════════════════════════════
-    # TAB 1: OVERVIEW & DATA QUALITY (Sections 8-10)
+    # TAB 1: OVERVIEW & DATA QUALITY
     # ═══════════════════════════════════
-    with tabs[0]:
-        st.header("Dataset Overview & Data Quality")
-        
-        # Quality Score Breakdown (Section 9)
+    if active_workspace == "Overview":
+        render_section_header("🎯", "Dataset Overview & Quality", "Profile")
+
+        # Quality Score Breakdown
         q_score = compute_quality_score(df)
         total_cells = df.shape[0] * df.shape[1]
-        missing_pct = (df.isnull().sum().sum() / total_cells) * 100 if total_cells > 0 else 0
-        dup_pct = (df.duplicated().sum() / df.shape[0]) * 100 if df.shape[0] > 0 else 0
-        
-        qc1, qc2, qc3 = st.columns(3)
-        qc1.metric("🎯 Data Quality Score", f"{q_score}/100")
-        qc2.metric("⚠️ Missing Values", f"{missing_pct:.1f}%")
-        qc3.metric("🔁 Duplicate Rows", f"{df.duplicated().sum()} ({dup_pct:.1f}%)")
-        
-        # Column Info Table (Section 8)
-        st.subheader("Column Profile")
+        missing_pct = (profile["missing_total"] / total_cells) * 100 if total_cells > 0 else 0
+        dup_pct = (profile["duplicate_total"] / df.shape[0]) * 100 if df.shape[0] > 0 and profile["duplicate_total"] is not None else 0
+
+        # Quality visual
+        if q_score >= 80:
+            ring_text_color = "var(--accent-emerald)"
+        elif q_score >= 50:
+            ring_text_color = "var(--accent-amber)"
+        else:
+            ring_text_color = "var(--accent-rose)"
+
+        qc1, qc2, qc3, qc4 = st.columns(4)
+        with qc1:
+            st.markdown(f"""<div style='text-align: center;'>
+                <div class='quality-ring' style='background: conic-gradient({"#34d399" if q_score >= 80 else "#fbbf24" if q_score >= 50 else "#fb7185"} {q_score * 3.6}deg, rgba(30,41,59,0.5) 0deg);'>
+                    <div class='quality-ring-inner'>
+                        <span class='quality-ring-value' style='color: {ring_text_color}'>{q_score}</span>
+                        <span class='quality-ring-label'>Quality</span>
+                    </div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+        with qc2:
+            st.metric("⚠️ Missing Values", f"{missing_pct:.1f}%", delta=f"{missing_total:,} cells", delta_color="inverse")
+        with qc3:
+            duplicate_display = f"{profile['duplicate_total']:,}" if profile["duplicate_total"] is not None else "Not scanned"
+            duplicate_delta = f"{dup_pct:.1f}%" if profile["duplicate_total"] is not None else "Large dataset"
+            st.metric("🔁 Duplicate Rows", duplicate_display, delta=duplicate_delta, delta_color="inverse")
+        with qc4:
+            st.metric("📐 Data Types", f"{df.dtypes.nunique()}", delta=f"{len(num_cols_list)} num / {len(cat_cols_list)} cat")
+
+        # Column Info Table
+        render_section_header("📑", "Column Profile", f"{df.shape[1]} columns")
         col_info = pd.DataFrame({
             'Column': df.columns,
-            'Data Type': df.dtypes.astype(str).values,
-            'Non-Null Count': df.count().values,
-            'Missing': df.isnull().sum().values,
-            'Missing %': (df.isnull().sum() / len(df) * 100).round(1).values,
-            'Unique Values': df.nunique().values,
+            'Type': df.dtypes.astype(str).values,
+            'Non-Null': df.count().values,
+            'Missing': profile["missing_by_column"].values,
+            'Missing %': (profile["missing_by_column"] / max(len(df), 1) * 100).round(1).values,
+            'Unique': df.nunique().values,
+            'Sample Value': [str(df[c].dropna().iloc[0]) if profile["missing_by_column"][c] < len(df) else "—" for c in df.columns],
         })
         st.dataframe(col_info, use_container_width=True, hide_index=True)
-        
+
         # Preview
-        st.subheader("Data Preview")
+        render_section_header("👁️", "Data Preview", "First 10 rows")
         st.dataframe(df.head(10), use_container_width=True)
 
     # ═══════════════════════════════════
-    # TAB 2: DATA CLEANING (Sections 10-12)
+    # TAB 2: DATA CLEANING
     # ═══════════════════════════════════
-    with tabs[1]:
-        st.header("Data Preparation & Cleaning")
-        
+    if active_workspace == "Cleaning":
+        render_section_header("🧹", "Data Preparation & Cleaning", "Transform")
+
         cl1, cl2, cl3 = st.columns(3)
+
         with cl1:
-            st.subheader("Missing Values")
-            strategy = st.selectbox("Imputation Strategy", ["Mean", "Median", "Mode", "Drop Rows with Missing"])
-            if st.button("Apply Imputation", use_container_width=True):
+            st.markdown("#### 🩹 Missing Values")
+            missing_columns = int((profile["missing_by_column"] > 0).sum())
+            st.caption(f"{profile['missing_total']:,} missing cells across {missing_columns} columns")
+            strategy = st.selectbox("Imputation Strategy", ["Mean", "Median", "Mode", "Drop Rows with Missing"], key="impute_strategy")
+            if st.button("✅ Apply Imputation", use_container_width=True, key="btn_impute"):
                 if strategy == "Drop Rows with Missing":
                     before = len(df)
-                    st.session_state.df = df.dropna()
+                    set_dataset(df.dropna())
                     after = len(st.session_state.df)
-                    st.session_state.cleaning_log.append(f"Dropped {before-after} rows with missing values")
+                    st.session_state.cleaning_log.append(f"Dropped {before - after} rows with missing values")
                 else:
-                    for col in df.columns:
-                        if df[col].isnull().sum() > 0:
-                            if pd.api.types.is_numeric_dtype(df[col]):
-                                val = df[col].mean() if strategy == "Mean" else (df[col].median() if strategy == "Median" else df[col].mode()[0])
-                                df[col].fillna(val, inplace=True)
+                    # Create a copy to avoid inplace mutation issues
+                    df_clean = df.copy()
+                    for col in df_clean.columns:
+                        if df_clean[col].isnull().sum() > 0:
+                            if pd.api.types.is_numeric_dtype(df_clean[col]):
+                                if strategy == "Mean":
+                                    val = df_clean[col].mean()
+                                elif strategy == "Median":
+                                    val = df_clean[col].median()
+                                else:
+                                    val = df_clean[col].mode().iloc[0] if not df_clean[col].mode().empty else 0
+                                df_clean[col] = df_clean[col].fillna(val)
                             else:
-                                df[col].fillna(df[col].mode()[0], inplace=True)
-                    st.session_state.df = df
+                                mode_val = df_clean[col].mode().iloc[0] if not df_clean[col].mode().empty else "Unknown"
+                                df_clean[col] = df_clean[col].fillna(mode_val)
+                    set_dataset(df_clean)
                     st.session_state.cleaning_log.append(f"Imputed missing values using {strategy}")
-                st.success("Done!")
+                st.success("✅ Done!")
                 st.rerun()
-                
+
         with cl2:
-            st.subheader("Duplicates")
-            st.write(f"**{df.duplicated().sum()}** duplicate rows found")
-            if st.button("Remove Duplicates", use_container_width=True):
+            st.markdown("#### 🔁 Duplicates")
+            dup_count = profile["duplicate_total"]
+            if dup_count is None:
+                st.caption("Automatic scan was skipped for this large dataset.")
+            else:
+                st.caption(f"{dup_count:,} duplicate rows found ({dup_count / max(len(df), 1) * 100:.1f}%)")
+            if st.button("🗑️ Remove Duplicates", use_container_width=True, key="btn_dedup", disabled=(dup_count == 0)):
                 before = len(df)
-                st.session_state.df = df.drop_duplicates()
+                set_dataset(df.drop_duplicates())
                 removed = before - len(st.session_state.df)
                 st.session_state.cleaning_log.append(f"Removed {removed} duplicate rows")
-                st.success(f"Removed {removed} duplicates!")
+                st.success(f"✅ Removed {removed} duplicates!")
                 st.rerun()
 
         with cl3:
-            st.subheader("Outlier Treatment")
-            outlier_col = st.selectbox("Column", num_cols_list, key="outlier_col")
-            outlier_method = st.selectbox("Method", ["IQR Capping", "Z-Score Removal"])
-            if st.button("Treat Outliers", use_container_width=True):
-                if outlier_method == "IQR Capping":
-                    Q1 = df[outlier_col].quantile(0.25)
-                    Q3 = df[outlier_col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    df[outlier_col] = df[outlier_col].clip(Q1 - 1.5*IQR, Q3 + 1.5*IQR)
-                else:
-                    z = np.abs(stats.zscore(df[outlier_col].dropna()))
-                    mask = z < 3
-                    df = df.loc[df[outlier_col].dropna().index[mask]]
-                st.session_state.df = df
-                st.session_state.cleaning_log.append(f"Outlier treatment ({outlier_method}) on {outlier_col}")
-                st.success("Outliers treated!")
+            st.markdown("#### 📐 Outlier Treatment")
+            if len(num_cols_list) > 0:
+                outlier_col = st.selectbox("Column", num_cols_list, key="outlier_col")
+                outlier_method = st.selectbox("Method", ["IQR Capping", "Z-Score Removal"], key="outlier_method")
+                if st.button("⚡ Treat Outliers", use_container_width=True, key="btn_outlier"):
+                    df_out = df.copy()
+                    if outlier_method == "IQR Capping":
+                        Q1 = df_out[outlier_col].quantile(0.25)
+                        Q3 = df_out[outlier_col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        df_out[outlier_col] = df_out[outlier_col].clip(Q1 - 1.5 * IQR, Q3 + 1.5 * IQR)
+                    else:
+                        col_data = df_out[outlier_col].dropna()
+                        z_scores = np.abs(stats.zscore(col_data))
+                        valid_indices = col_data.index[z_scores < 3]
+                        df_out = df_out.loc[df_out.index.isin(valid_indices) | df_out[outlier_col].isna()]
+                    set_dataset(df_out)
+                    st.session_state.cleaning_log.append(f"Outlier treatment ({outlier_method}) on {outlier_col}")
+                    st.success("✅ Outliers treated!")
+                    st.rerun()
+            else:
+                st.info("No numerical columns available for outlier treatment.")
+
+        # Column Operations
+        st.divider()
+        render_section_header("🛠️", "Column Operations", "Advanced")
+        cop1, cop2 = st.columns(2)
+
+        with cop1:
+            st.markdown("#### 🗑️ Drop Columns")
+            drop_cols = st.multiselect("Select columns to drop", df.columns.tolist(), key="drop_cols")
+            if st.button("Drop Selected", use_container_width=True, key="btn_drop_cols", disabled=(len(drop_cols) == 0)):
+                set_dataset(df.drop(columns=drop_cols))
+                st.session_state.cleaning_log.append(f"Dropped columns: {', '.join(drop_cols)}")
+                st.success(f"✅ Dropped {len(drop_cols)} columns!")
                 st.rerun()
 
-        # Audit Trail (Section 12)
+        with cop2:
+            st.markdown("#### 🔄 Convert Types")
+            type_col = st.selectbox("Column", df.columns.tolist(), key="type_conv_col")
+            new_type = st.selectbox("Convert to", ["numeric", "string", "datetime", "category"], key="new_type")
+            if st.button("Convert", use_container_width=True, key="btn_convert"):
+                try:
+                    df_conv = df.copy()
+                    if new_type == "numeric":
+                        df_conv[type_col] = pd.to_numeric(df_conv[type_col], errors='coerce')
+                    elif new_type == "string":
+                        df_conv[type_col] = df_conv[type_col].astype(str)
+                    elif new_type == "datetime":
+                        df_conv[type_col] = pd.to_datetime(df_conv[type_col], errors='coerce')
+                    elif new_type == "category":
+                        df_conv[type_col] = df_conv[type_col].astype('category')
+                    set_dataset(df_conv)
+                    st.session_state.cleaning_log.append(f"Converted '{type_col}' to {new_type}")
+                    st.success(f"✅ Converted '{type_col}' to {new_type}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Conversion failed: {e}")
+
+        # Audit Trail
         if st.session_state.cleaning_log:
-            st.subheader("🔍 Cleaning Audit Trail")
+            st.divider()
+            render_section_header("📝", "Cleaning Audit Trail", f"{len(st.session_state.cleaning_log)} operations")
             for i, log in enumerate(st.session_state.cleaning_log, 1):
-                st.write(f"{i}. {log}")
+                st.markdown(f"""<div class='audit-item'>
+                    <span class='audit-num'>{i}</span>
+                    <span class='audit-text'>{safe_html_text(log)}</span>
+                </div>""", unsafe_allow_html=True)
 
     # ═══════════════════════════════════
-    # TAB 3: EDA & AUTO-CHARTS (Sections 13-15)
+    # TAB 3: EDA & AUTO-CHARTS
     # ═══════════════════════════════════
-    with tabs[2]:
-        st.header("Exploratory Data Analysis")
-        
-        # Descriptive Stats (Section 13)
-        st.subheader("📊 Descriptive Statistics")
-        desc = df.describe(include='all').T
+    if active_workspace == "Explore":
+        render_section_header("📊", "Exploratory Data Analysis", "Discover")
+        plot_df = df.sample(n=10_000, random_state=42) if len(df) > 10_000 else df
+        if len(df) > len(plot_df):
+            st.caption(f"Charts use a fixed 10,000-row sample for responsiveness. Summary statistics still use all {len(df):,} rows.")
+
+        # Descriptive Stats
+        st.markdown("#### 📊 Descriptive Statistics")
+        desc = get_eda_describe(df)
         if 'mean' in desc.columns:
-            for stat_col in ['mean', 'std', 'min', 'max']:
+            for stat_col in ['mean', 'std', 'min', 'max', '25%', '50%', '75%']:
                 if stat_col in desc.columns:
-                    desc[stat_col] = desc[stat_col].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "—")
+                    desc[stat_col] = desc[stat_col].apply(lambda x: f"{x:.3f}" if pd.notna(x) and isinstance(x, (int, float)) else "—")
         st.dataframe(desc.astype(str), use_container_width=True)
-        
-        # Additional Stats: Skewness & Kurtosis (Section 13)
+
+        # Skewness & Kurtosis
         if len(num_cols_list) > 0:
-            st.subheader("📐 Distribution Shape (Skewness & Kurtosis)")
-            shape_data = pd.DataFrame({
-                'Column': num_cols_list,
-                'Skewness': [df[c].skew() for c in num_cols_list],
-                'Kurtosis': [df[c].kurtosis() for c in num_cols_list],
-                'Interpretation': [
-                    "Highly Skewed" if abs(df[c].skew()) > 1 else "Moderately Skewed" if abs(df[c].skew()) > 0.5 else "Approximately Normal"
-                    for c in num_cols_list
-                ]
-            })
-            st.dataframe(shape_data, use_container_width=True, hide_index=True)
-        
-        # Auto-Charts (Section 14)
-        st.subheader("📈 Automated Visualizations")
-        st.write("Charts are automatically selected based on your column data type and distribution.")
-        
-        chart_col = st.selectbox("Select Column to Visualize", df.columns, key="eda_chart_col")
-        chart_type = auto_select_chart(df[chart_col], chart_col)
-        
-        ecol1, ecol2 = st.columns(2)
-        with ecol1:
+            with st.expander("📐 Distribution Shape — Skewness & Kurtosis", expanded=False):
+                shape_data = pd.DataFrame({
+                    'Column': num_cols_list,
+                    'Skewness': [round(df[c].skew(), 3) if pd.notna(df[c].skew()) else 0 for c in num_cols_list],
+                    'Kurtosis': [round(df[c].kurtosis(), 3) if pd.notna(df[c].kurtosis()) else 0 for c in num_cols_list],
+                    'Shape': [
+                        "🔴 Highly Skewed" if abs(df[c].skew()) > 1 else "🟡 Moderate" if abs(df[c].skew()) > 0.5 else "🟢 Normal"
+                        for c in num_cols_list
+                    ]
+                })
+                st.dataframe(shape_data, use_container_width=True, hide_index=True)
+
+        # Auto-Charts
+        st.divider()
+        render_section_header("📈", "Automated Visualizations", "AI-Selected")
+
+        eda_col1, eda_col2 = st.columns([1, 3])
+        with eda_col1:
+            chart_col = st.selectbox("Select Column", df.columns, key="eda_chart_col")
+            chart_type = auto_select_chart(df[chart_col], chart_col)
+            st.markdown(f"<span class='stat-pill'>📊 Auto-selected: <b>{chart_type}</b></span>", unsafe_allow_html=True)
+
+            # Quick column stats
             if pd.api.types.is_numeric_dtype(df[chart_col]):
-                st.plotly_chart(px.histogram(df, x=chart_col, marginal="box",
-                    title=f"Distribution of {chart_col}",
-                    color_discrete_sequence=["#818cf8"]), use_container_width=True)
+                st.markdown(f"""
+                <div style='margin-top: 12px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.8;'>
+                    <b>Mean:</b> {df[chart_col].mean():.3f}<br>
+                    <b>Median:</b> {df[chart_col].median():.3f}<br>
+                    <b>Std:</b> {df[chart_col].std():.3f}<br>
+                    <b>Min:</b> {df[chart_col].min():.3f}<br>
+                    <b>Max:</b> {df[chart_col].max():.3f}
+                </div>""", unsafe_allow_html=True)
             else:
-                vc = df[chart_col].value_counts().head(20).reset_index()
-                vc.columns = [chart_col, 'count']
-                st.plotly_chart(px.bar(vc, x=chart_col, y='count',
-                    title=f"Frequency of {chart_col}",
-                    color_discrete_sequence=["#38bdf8"]), use_container_width=True)
-        with ecol2:
-            if pd.api.types.is_numeric_dtype(df[chart_col]):
-                st.plotly_chart(px.box(df, y=chart_col, title=f"Box Plot — {chart_col}",
-                    color_discrete_sequence=["#34d399"]), use_container_width=True)
-            else:
-                vc = df[chart_col].value_counts().head(10).reset_index()
-                vc.columns = [chart_col, 'count']
-                st.plotly_chart(px.pie(vc, names=chart_col, values='count',
-                    title=f"Pie Chart — {chart_col}"), use_container_width=True)
-        
-        # Smart Insight for Column (Section 15)
-        st.markdown(f"""<div class='insight-card'>
-            <strong>💡 AI Insight for <code>{chart_col}</code>:</strong><br>
-            {"This column has <b>" + str(df[chart_col].isnull().sum()) + "</b> missing values. " if df[chart_col].isnull().sum() > 0 else ""}
-            {"It is <b>highly right-skewed</b> (skew=" + f"{df[chart_col].skew():.2f}" + "), suggesting a concentration of lower values with a long right tail. Consider a log transformation." if pd.api.types.is_numeric_dtype(df[chart_col]) and df[chart_col].skew() > 1 else ""}
-            {"It is <b>highly left-skewed</b> (skew=" + f"{df[chart_col].skew():.2f}" + ")." if pd.api.types.is_numeric_dtype(df[chart_col]) and df[chart_col].skew() < -1 else ""}
-            {"It follows an <b>approximately normal distribution</b>." if pd.api.types.is_numeric_dtype(df[chart_col]) and abs(df[chart_col].skew()) <= 0.5 else ""}
-            {"The dominant category is '<b>" + str(df[chart_col].mode()[0]) + "</b>' appearing " + str(df[chart_col].value_counts().iloc[0]) + " times." if not pd.api.types.is_numeric_dtype(df[chart_col]) else ""}
-        </div>""", unsafe_allow_html=True)
-        
-        # Correlation Heatmap (Section 14)
+                nuniq = df[chart_col].nunique()
+                top_val = df[chart_col].mode().iloc[0] if not df[chart_col].mode().empty else "N/A"
+                st.markdown(f"""
+                <div style='margin-top: 12px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.8;'>
+                    <b>Unique:</b> {nuniq}<br>
+                    <b>Top:</b> {safe_html_text(top_val)}<br>
+                    <b>Missing:</b> {df[chart_col].isnull().sum()}
+                </div>""", unsafe_allow_html=True)
+
+        with eda_col2:
+            ecol1, ecol2 = st.columns(2)
+            with ecol1:
+                if pd.api.types.is_numeric_dtype(df[chart_col]):
+                    fig = px.histogram(plot_df, x=chart_col, marginal="box",
+                        title=f"Distribution of {chart_col}",
+                        color_discrete_sequence=["#818cf8"],
+                        template="plotly_dark")
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Inter"),
+                        title_font_size=14
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    vc = df[chart_col].value_counts().head(20).reset_index()
+                    vc.columns = [chart_col, 'count']
+                    fig = px.bar(vc, x=chart_col, y='count',
+                        title=f"Frequency of {chart_col}",
+                        color_discrete_sequence=["#38bdf8"],
+                        template="plotly_dark")
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Inter"),
+                        title_font_size=14
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            with ecol2:
+                if pd.api.types.is_numeric_dtype(df[chart_col]):
+                    fig = px.violin(plot_df, y=chart_col, box=True, points="outliers",
+                        title=f"Violin Plot — {chart_col}",
+                        color_discrete_sequence=["#34d399"],
+                        template="plotly_dark")
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Inter"),
+                        title_font_size=14
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    vc = df[chart_col].value_counts().head(10).reset_index()
+                    vc.columns = [chart_col, 'count']
+                    fig = px.pie(vc, names=chart_col, values='count',
+                        title=f"Distribution — {chart_col}",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                        template="plotly_dark")
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Inter"),
+                        title_font_size=14
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+        # AI Insight for Column
+        insight_parts = []
+        if df[chart_col].isnull().sum() > 0:
+            insight_parts.append(f"This column has <b>{df[chart_col].isnull().sum()}</b> missing values ({df[chart_col].isnull().sum()/len(df)*100:.1f}%).")
+        if pd.api.types.is_numeric_dtype(df[chart_col]):
+            try:
+                skew_val = df[chart_col].skew()
+                if skew_val > 1:
+                    insight_parts.append(f"It is <b>highly right-skewed</b> (skew={skew_val:.2f}), suggesting a concentration of lower values. Consider a log transformation.")
+                elif skew_val < -1:
+                    insight_parts.append(f"It is <b>highly left-skewed</b> (skew={skew_val:.2f}).")
+                elif abs(skew_val) <= 0.5:
+                    insight_parts.append(f"It follows an <b>approximately normal distribution</b> (skew={skew_val:.2f}).")
+                else:
+                    insight_parts.append(f"It has <b>moderate skewness</b> (skew={skew_val:.2f}).")
+            except Exception:
+                pass
+        else:
+            try:
+                mode_val = df[chart_col].mode().iloc[0] if not df[chart_col].mode().empty else "N/A"
+                top_count = df[chart_col].value_counts().iloc[0] if df[chart_col].value_counts().shape[0] > 0 else 0
+                insight_parts.append(f"The dominant category is '<b>{mode_val}</b>' appearing {top_count} times ({top_count/len(df)*100:.1f}% of data).")
+            except Exception:
+                pass
+
+        if insight_parts:
+            st.markdown(f"""<div class='insight-card'>
+                <strong>💡 AI Insight for <code>{safe_html_text(chart_col)}</code>:</strong><br>
+                {safe_html_text(" ".join(insight_parts))}
+            </div>""", unsafe_allow_html=True)
+
+        # Correlation Heatmap
         if len(num_cols_list) >= 2:
-            st.subheader("🔥 Correlation Heatmap")
-            corr = df[num_cols_list].corr()
-            fig = px.imshow(corr, text_auto=".2f", color_continuous_scale="RdBu_r",
-                title="Feature Correlation Matrix", aspect="auto")
-            fig.update_layout(height=500)
+            st.divider()
+            render_section_header("🔥", "Correlation Heatmap", f"{len(num_cols_list)} features")
+
+            corr_method = st.radio("Method", ["Pearson", "Spearman", "Kendall"], horizontal=True, key="corr_method")
+            corr_df = df[num_cols_list]
+            if len(corr_df) > 50_000:
+                corr_df = corr_df.sample(n=50_000, random_state=42)
+                st.caption("Correlation is estimated from a fixed 50,000-row sample for this large dataset.")
+            corr = corr_df.corr(method=corr_method.lower())
+
+            fig = px.imshow(corr, text_auto=".2f",
+                color_continuous_scale="RdBu_r",
+                title=f"{corr_method} Correlation Matrix",
+                aspect="auto",
+                template="plotly_dark")
+            fig.update_layout(
+                height=max(400, len(num_cols_list) * 35),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(family="Inter")
+            )
             st.plotly_chart(fig, use_container_width=True)
-            
+
             # Strong correlations insight
             strong = []
             for i in range(len(corr.columns)):
-                for j in range(i+1, len(corr.columns)):
+                for j in range(i + 1, len(corr.columns)):
                     val = corr.iloc[i, j]
                     if abs(val) > 0.7:
-                        strong.append(f"**{corr.columns[i]}** ↔ **{corr.columns[j]}**: {val:.2f}")
+                        direction = "📈 Positive" if val > 0 else "📉 Negative"
+                        strong.append(f"{direction}: <b>{safe_html_text(corr.columns[i])}</b> ↔ <b>{safe_html_text(corr.columns[j])}</b> = {val:.3f}")
             if strong:
-                st.markdown(f"""<div class='insight-card'>
-                    <strong>💡 Strong Correlations Detected:</strong><br>
+                insight_cls = "insight-warning" if any(abs(corr.iloc[i, j]) > 0.85 for i in range(len(corr.columns)) for j in range(i + 1, len(corr.columns))) else ""
+                st.markdown(f"""<div class='insight-card {insight_cls}'>
+                    <strong>🔗 Strong Correlations Detected ({len(strong)}):</strong><br>
                     {"<br>".join(strong)}
                 </div>""", unsafe_allow_html=True)
-        
-        # Scatter Matrix for selected numerics
+
+        # Scatter Matrix
         if len(num_cols_list) >= 2:
-            st.subheader("🔗 Pairwise Scatter Plots")
-            scatter_cols = st.multiselect("Select columns (max 5)", num_cols_list, default=num_cols_list[:min(3, len(num_cols_list))], key="scatter_multi")
-            if len(scatter_cols) >= 2:
-                fig = px.scatter_matrix(df[scatter_cols[:5]], dimensions=scatter_cols[:5],
-                    color_discrete_sequence=["#818cf8"], title="Scatter Matrix")
-                fig.update_layout(height=600)
-                st.plotly_chart(fig, use_container_width=True)
+            with st.expander("🔗 Pairwise Scatter Plots", expanded=False):
+                scatter_cols = st.multiselect(
+                    "Select columns (max 5)",
+                    num_cols_list,
+                    default=num_cols_list[:min(3, len(num_cols_list))],
+                    key="scatter_multi"
+                )
+                if len(scatter_cols) >= 2:
+                    fig = px.scatter_matrix(
+                        plot_df[scatter_cols[:5]],
+                        dimensions=scatter_cols[:5],
+                        color_discrete_sequence=["#818cf8"],
+                        title="Scatter Matrix",
+                        template="plotly_dark"
+                    )
+                    fig.update_layout(
+                        height=600,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(family="Inter")
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
 
     # ═══════════════════════════════════
-    # TAB 4: STATISTICAL TESTS (Section 16)
+    # TAB 4: STATISTICAL TESTS
     # ═══════════════════════════════════
-    with tabs[3]:
-        st.header("Statistical Hypothesis Testing")
-        
+    if active_workspace == "Statistics":
+        render_section_header("📈", "Statistical Hypothesis Testing", "Inference")
+
         test_type = st.selectbox("Select Test", [
             "Independent T-Test", "Paired T-Test", "ANOVA (One-Way)",
             "Mann-Whitney U", "Kruskal-Wallis",
             "Pearson Correlation", "Spearman Correlation",
             "Chi-Square Test", "Shapiro-Wilk (Normality)"
-        ])
-        
+        ], key="stat_test_type")
+
         num_cols = df.select_dtypes(include=np.number).columns.tolist()
         cat_cols = df.select_dtypes(exclude=np.number).columns.tolist()
-        
+
         if test_type == "Independent T-Test":
             if cat_cols and num_cols:
                 cat = st.selectbox("Grouping Variable (Binary)", cat_cols, key="tt_cat")
                 num = st.selectbox("Measurement Variable", num_cols, key="tt_num")
-                if st.button("Run T-Test"):
+                if st.button("▶️ Run T-Test", key="btn_ttest"):
                     groups = df[cat].dropna().unique()
                     if len(groups) == 2:
-                        g1 = df[df[cat]==groups[0]][num].dropna()
-                        g2 = df[df[cat]==groups[1]][num].dropna()
+                        g1 = df[df[cat] == groups[0]][num].dropna()
+                        g2 = df[df[cat] == groups[1]][num].dropna()
                         t_stat, p_val = stats.ttest_ind(g1, g2)
-                        
-                        r1, r2 = st.columns(2)
+
+                        r1, r2, r3 = st.columns(3)
                         r1.metric("T-Statistic", f"{t_stat:.4f}")
                         r2.metric("P-Value", f"{p_val:.4e}")
-                        
-                        # Effect size (Cohen's d)
-                        d = (g1.mean() - g2.mean()) / np.sqrt((g1.std()**2 + g2.std()**2) / 2)
-                        st.metric("Cohen's d (Effect Size)", f"{d:.3f}")
-                        
+                        # Cohen's d
+                        pooled_std = np.sqrt((g1.std() ** 2 + g2.std() ** 2) / 2)
+                        d = (g1.mean() - g2.mean()) / pooled_std if pooled_std > 0 else 0
+                        r3.metric("Cohen's d", f"{d:.3f}")
+
                         if p_val < 0.05:
-                            st.success(f"✅ Statistically significant (p < 0.05). There IS a meaningful difference between '{groups[0]}' and '{groups[1]}'.")
+                            st.success(f"✅ Statistically significant (p < 0.05). Meaningful difference between '{groups[0]}' and '{groups[1]}'.")
                         else:
                             st.warning(f"⚠️ Not significant (p ≥ 0.05). No meaningful difference found.")
-                        
+
                         fig = px.box(df, x=cat, y=num, color=cat, title=f"{num} by {cat}",
-                            color_discrete_sequence=["#818cf8", "#f87171"])
+                            color_discrete_sequence=["#818cf8", "#f87171"], template="plotly_dark")
+                        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
                         st.plotly_chart(fig, use_container_width=True)
                     else:
-                        st.error("T-Test requires exactly 2 groups. Use ANOVA for 3+ groups.")
-        
+                        st.error(f"T-Test requires exactly 2 groups, but '{cat}' has {len(groups)}. Use ANOVA for 3+ groups.")
+            else:
+                st.info("Need both categorical and numerical columns for this test.")
+
         elif test_type == "ANOVA (One-Way)":
             if cat_cols and num_cols:
                 cat = st.selectbox("Grouping Variable", cat_cols, key="anova_cat")
                 num = st.selectbox("Measurement Variable", num_cols, key="anova_num")
-                if st.button("Run ANOVA"):
-                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat)]
+                if st.button("▶️ Run ANOVA", key="btn_anova"):
+                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat) if len(group[num].dropna()) > 0]
                     if len(groups_data) >= 2:
                         f_stat, p_val = stats.f_oneway(*groups_data)
                         r1, r2 = st.columns(2)
@@ -834,37 +1082,61 @@ else:
                             st.success("✅ Significant difference across groups (p < 0.05).")
                         else:
                             st.warning("⚠️ No significant difference found.")
-                        fig = px.box(df, x=cat, y=num, color=cat, title=f"ANOVA: {num} by {cat}")
+                        fig = px.box(df, x=cat, y=num, color=cat, title=f"ANOVA: {num} by {cat}", template="plotly_dark")
+                        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
                         st.plotly_chart(fig, use_container_width=True)
-                        
+                    else:
+                        st.error("Need at least 2 non-empty groups for ANOVA.")
+            else:
+                st.info("Need both categorical and numerical columns for this test.")
+
         elif test_type == "Pearson Correlation":
             if len(num_cols) >= 2:
                 v1 = st.selectbox("Variable 1", num_cols, key="p_v1")
-                v2 = st.selectbox("Variable 2", num_cols, index=1, key="p_v2")
-                if st.button("Compute Pearson"):
-                    r, p = stats.pearsonr(df[v1].dropna(), df[v2].dropna())
-                    c1, c2 = st.columns(2)
-                    c1.metric("Pearson r", f"{r:.4f}")
-                    c2.metric("P-Value", f"{p:.4e}")
-                    fig = px.scatter(df, x=v1, y=v2, trendline="ols", title=f"Scatter: {v1} vs {v2}",
-                        color_discrete_sequence=["#818cf8"])
-                    st.plotly_chart(fig, use_container_width=True)
-                    
+                v2 = st.selectbox("Variable 2", num_cols, index=min(1, len(num_cols) - 1), key="p_v2")
+                if st.button("▶️ Compute Pearson", key="btn_pearson"):
+                    # Fix: align the two series before computing
+                    clean_df = df[[v1, v2]].dropna()
+                    if len(clean_df) > 2:
+                        r, p = stats.pearsonr(clean_df[v1], clean_df[v2])
+                        c1, c2 = st.columns(2)
+                        c1.metric("Pearson r", f"{r:.4f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        fig = px.scatter(clean_df, x=v1, y=v2, trendline="ols", title=f"Scatter: {v1} vs {v2}",
+                            color_discrete_sequence=["#818cf8"], template="plotly_dark")
+                        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("Not enough data points after removing missing values.")
+            else:
+                st.info("Need at least 2 numerical columns.")
+
         elif test_type == "Spearman Correlation":
             if len(num_cols) >= 2:
                 v1 = st.selectbox("Variable 1", num_cols, key="s_v1")
-                v2 = st.selectbox("Variable 2", num_cols, index=1, key="s_v2")
-                if st.button("Compute Spearman"):
-                    r, p = stats.spearmanr(df[v1].dropna(), df[v2].dropna())
-                    c1, c2 = st.columns(2)
-                    c1.metric("Spearman ρ", f"{r:.4f}")
-                    c2.metric("P-Value", f"{p:.4e}")
-        
+                v2 = st.selectbox("Variable 2", num_cols, index=min(1, len(num_cols) - 1), key="s_v2")
+                if st.button("▶️ Compute Spearman", key="btn_spearman"):
+                    # Fix: align the two series before computing
+                    clean_df = df[[v1, v2]].dropna()
+                    if len(clean_df) > 2:
+                        r, p = stats.spearmanr(clean_df[v1], clean_df[v2])
+                        c1, c2 = st.columns(2)
+                        c1.metric("Spearman ρ", f"{r:.4f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        fig = px.scatter(clean_df, x=v1, y=v2, trendline="ols", title=f"Scatter: {v1} vs {v2}",
+                            color_discrete_sequence=["#c084fc"], template="plotly_dark")
+                        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error("Not enough data points after removing missing values.")
+            else:
+                st.info("Need at least 2 numerical columns.")
+
         elif test_type == "Chi-Square Test":
             if len(cat_cols) >= 2:
                 v1 = st.selectbox("Variable 1", cat_cols, key="chi_v1")
-                v2 = st.selectbox("Variable 2", cat_cols, index=min(1, len(cat_cols)-1), key="chi_v2")
-                if st.button("Run Chi-Square"):
+                v2 = st.selectbox("Variable 2", cat_cols, index=min(1, len(cat_cols) - 1), key="chi_v2")
+                if st.button("▶️ Run Chi-Square", key="btn_chi"):
                     ct = pd.crosstab(df[v1], df[v2])
                     chi2, p, dof, expected = stats.chi2_contingency(ct)
                     c1, c2, c3 = st.columns(3)
@@ -872,38 +1144,52 @@ else:
                     c2.metric("P-Value", f"{p:.4e}")
                     c3.metric("Degrees of Freedom", dof)
                     if p < 0.05:
-                        st.success("✅ Variables are significantly associated.")
+                        st.success("✅ Variables are significantly associated (p < 0.05).")
                     else:
-                        st.warning("⚠️ No significant association.")
-                        
+                        st.warning("⚠️ No significant association found.")
+
+                    # Heatmap of contingency table
+                    fig = px.imshow(ct, text_auto=True, title=f"Contingency Table: {v1} vs {v2}",
+                        color_continuous_scale="Blues", template="plotly_dark")
+                    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                    st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Need at least 2 categorical columns.")
+
         elif test_type == "Shapiro-Wilk (Normality)":
             if num_cols:
                 col = st.selectbox("Column", num_cols, key="shapiro_col")
-                if st.button("Run Shapiro-Wilk"):
+                if st.button("▶️ Run Shapiro-Wilk", key="btn_shapiro"):
                     sample = df[col].dropna()
                     if len(sample) > 5000:
                         sample = sample.sample(5000, random_state=42)
-                    stat, p = stats.shapiro(sample)
-                    c1, c2 = st.columns(2)
-                    c1.metric("W-Statistic", f"{stat:.4f}")
-                    c2.metric("P-Value", f"{p:.4e}")
-                    if p > 0.05:
-                        st.success(f"✅ {col} appears normally distributed (p > 0.05).")
+                    if len(sample) >= 3:
+                        stat_val, p = stats.shapiro(sample)
+                        c1, c2 = st.columns(2)
+                        c1.metric("W-Statistic", f"{stat_val:.4f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        if p > 0.05:
+                            st.success(f"✅ '{col}' appears normally distributed (p > 0.05).")
+                        else:
+                            st.warning(f"⚠️ '{col}' is NOT normally distributed (p < 0.05).")
+                        fig = px.histogram(df, x=col, marginal="violin", title=f"Distribution: {col}",
+                            color_discrete_sequence=["#818cf8"], template="plotly_dark")
+                        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                        st.plotly_chart(fig, use_container_width=True)
                     else:
-                        st.warning(f"⚠️ {col} is NOT normally distributed (p < 0.05).")
-                    fig = px.histogram(df, x=col, marginal="violin", title=f"Distribution: {col}",
-                        color_discrete_sequence=["#818cf8"])
-                    st.plotly_chart(fig, use_container_width=True)
+                        st.error("Need at least 3 data points for Shapiro-Wilk test.")
+            else:
+                st.info("Need numerical columns for this test.")
 
         elif test_type == "Mann-Whitney U":
             if cat_cols and num_cols:
                 cat = st.selectbox("Grouping Variable (Binary)", cat_cols, key="mw_cat")
                 num = st.selectbox("Measurement Variable", num_cols, key="mw_num")
-                if st.button("Run Mann-Whitney"):
+                if st.button("▶️ Run Mann-Whitney", key="btn_mw"):
                     groups = df[cat].dropna().unique()
                     if len(groups) == 2:
-                        g1 = df[df[cat]==groups[0]][num].dropna()
-                        g2 = df[df[cat]==groups[1]][num].dropna()
+                        g1 = df[df[cat] == groups[0]][num].dropna()
+                        g2 = df[df[cat] == groups[1]][num].dropna()
                         u, p = stats.mannwhitneyu(g1, g2, alternative='two-sided')
                         c1, c2 = st.columns(2)
                         c1.metric("U-Statistic", f"{u:.1f}")
@@ -912,13 +1198,17 @@ else:
                             st.success("✅ Significant difference between groups.")
                         else:
                             st.warning("⚠️ No significant difference found.")
+                    else:
+                        st.error(f"Mann-Whitney requires exactly 2 groups, found {len(groups)}.")
+            else:
+                st.info("Need both categorical and numerical columns.")
 
         elif test_type == "Kruskal-Wallis":
             if cat_cols and num_cols:
                 cat = st.selectbox("Grouping Variable", cat_cols, key="kw_cat")
                 num = st.selectbox("Measurement Variable", num_cols, key="kw_num")
-                if st.button("Run Kruskal-Wallis"):
-                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat)]
+                if st.button("▶️ Run Kruskal-Wallis", key="btn_kw"):
+                    groups_data = [group[num].dropna().values for name, group in df.groupby(cat) if len(group[num].dropna()) > 0]
                     if len(groups_data) >= 2:
                         h, p = stats.kruskal(*groups_data)
                         c1, c2 = st.columns(2)
@@ -928,53 +1218,73 @@ else:
                             st.success("✅ Significant difference across groups.")
                         else:
                             st.warning("⚠️ No significant difference found.")
+                    else:
+                        st.error("Need at least 2 non-empty groups.")
+            else:
+                st.info("Need both categorical and numerical columns.")
 
         elif test_type == "Paired T-Test":
             if len(num_cols) >= 2:
-                v1 = st.selectbox("Before/Group 1", num_cols, key="pt_v1")
-                v2 = st.selectbox("After/Group 2", num_cols, index=1, key="pt_v2")
-                if st.button("Run Paired T-Test"):
+                v1 = st.selectbox("Before / Group 1", num_cols, key="pt_v1")
+                v2 = st.selectbox("After / Group 2", num_cols, index=min(1, len(num_cols) - 1), key="pt_v2")
+                if st.button("▶️ Run Paired T-Test", key="btn_paired"):
                     clean = df[[v1, v2]].dropna()
-                    t, p = stats.ttest_rel(clean[v1], clean[v2])
-                    c1, c2 = st.columns(2)
-                    c1.metric("T-Statistic", f"{t:.4f}")
-                    c2.metric("P-Value", f"{p:.4e}")
-                    if p < 0.05:
-                        st.success("✅ Significant difference between paired measurements.")
+                    if len(clean) >= 3:
+                        t, p = stats.ttest_rel(clean[v1], clean[v2])
+                        c1, c2 = st.columns(2)
+                        c1.metric("T-Statistic", f"{t:.4f}")
+                        c2.metric("P-Value", f"{p:.4e}")
+                        if p < 0.05:
+                            st.success("✅ Significant difference between paired measurements.")
+                        else:
+                            st.warning("⚠️ No significant difference.")
                     else:
-                        st.warning("⚠️ No significant difference.")
+                        st.error("Not enough paired data points.")
+            else:
+                st.info("Need at least 2 numerical columns.")
 
     # ═══════════════════════════════════
-    # TAB 5: AUTOML & LEADERBOARD (Sections 17-23)
+    # TAB 5: AUTOML & LEADERBOARD
     # ═══════════════════════════════════
-    with tabs[4]:
-        st.header("AutoML — Multi-Model Training & Evaluation")
-        
-        # Target suggestion (Section 17)
+    if active_workspace == "AutoML":
+        render_section_header("🤖", "AutoML — Model Training Arena", "ML")
+
+        # Target suggestion
         suggested = suggest_target(df)
         target = st.selectbox("🎯 Target Variable", df.columns,
-            index=list(df.columns).index(suggested) if suggested in df.columns else 0)
-        
+            index=list(df.columns).index(suggested) if suggested in df.columns else 0, key="automl_target")
+
         feature_cols = [c for c in df.columns if c != target]
-        features = st.multiselect("Features (leave empty for all)", feature_cols, key="automl_feats")
+        features = st.multiselect("📊 Features (leave empty for all)", feature_cols, key="automl_feats")
         if not features:
             features = feature_cols
-        
-        # Auto-detect problem type (Section 18)
+
+        # Auto-detect problem type
         problem_type = detect_problem_type(df[target])
         problem_override = st.radio("Problem Type", ["Classification", "Regression"],
-            index=0 if problem_type == 'classification' else 1, horizontal=True)
+            index=0 if problem_type == 'classification' else 1, horizontal=True, key="problem_type_radio")
         is_class = problem_override == "Classification"
-        
-        cv_folds = st.slider("Cross-Validation Folds", 2, 10, 5)
-        
-        if st.button("🚀 Train All Models", use_container_width=True):
-            with st.spinner("Training multiple models with cross-validation..."):
+
+        opt_col1, opt_col2, opt_col3 = st.columns(3)
+        with opt_col1:
+            cv_folds = st.slider("Cross-Validation Folds", 2, 5, 3, key="cv_folds")
+        with opt_col2:
+            test_size = st.slider("Test Set Size (%)", 10, 40, 20, key="test_size")
+        with opt_col3:
+            max_training_rows = st.selectbox("Training row limit", [5_000, 10_000, 25_000, 50_000], index=2, key="training_row_limit", format_func=lambda value: f"{value:,} rows")
+        if not feature_cols:
+            st.info("Add at least one feature column besides the target before training a model.")
+
+        if st.button("🚀 Train All Models", use_container_width=True, type="primary", key="btn_train", disabled=not feature_cols):
+            with st.spinner("🔄 Training multiple models with cross-validation..."):
                 ml_df = df[features + [target]].dropna()
                 if len(ml_df) > 10:
+                    if len(ml_df) > max_training_rows:
+                        ml_df = ml_df.sample(n=max_training_rows, random_state=42)
+                        st.info(f"Training uses a reproducible {max_training_rows:,}-row sample to keep runtime and memory predictable. Evaluation metrics describe this sample.")
                     X = ml_df[features].copy()
                     y = ml_df[target].copy()
-                    
+
                     # Encode categoricals
                     label_encoders = {}
                     for col in X.columns:
@@ -982,30 +1292,48 @@ else:
                             le = LabelEncoder()
                             X[col] = le.fit_transform(X[col].astype(str))
                             label_encoders[col] = le
-                    X = X.apply(pd.to_numeric)
-                    
+                    # Ensure all numeric
+                    X = X.apply(pd.to_numeric, errors='coerce')
+                    X = X.fillna(0)
+
                     target_le = None
                     if is_class:
                         target_le = LabelEncoder()
                         y = target_le.fit_transform(y.astype(str))
-                    
-                    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-                    
-                    # Load XGBoost only when AutoML training is requested.
+                    else:
+                        y = pd.to_numeric(y, errors='coerce')
+                        valid_mask = y.notna()
+                        X = X[valid_mask]
+                        y = y[valid_mask].values
+
+                    stratify = y if is_class and pd.Series(y).value_counts().min() >= 2 else None
+                    try:
+                        X_train, X_test, y_train, y_test = train_test_split(
+                            X, y, test_size=test_size / 100, random_state=42, stratify=stratify
+                        )
+                    except ValueError:
+                        X_train, X_test, y_train, y_test = train_test_split(
+                            X, y, test_size=test_size / 100, random_state=42
+                        )
+                        st.warning("A stratified split was not possible for the selected sample; using a standard random split.")
+
+                    # Models
+                    # Optional estimators are imported only when AutoML is run, reducing
+                    # the dashboard's initial startup time for users who only explore data.
                     try:
                         import xgboost as xgb
                         HAS_XGB = True
                     except ImportError:
                         HAS_XGB = False
 
-                    # Models (Section 20)
                     if is_class:
                         models = {
-                            "Logistic Regression": LogisticRegression(max_iter=500, random_state=42),
-                            "KNN": KNeighborsClassifier(),
+                            "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
+                            "K-Nearest Neighbors": KNeighborsClassifier(),
                             "Decision Tree": DecisionTreeClassifier(random_state=42),
-                            "Random Forest": RandomForestClassifier(random_state=42),
+                            "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
                             "Gradient Boosting": GradientBoostingClassifier(random_state=42),
+                            "Naive Bayes": GaussianNB(),
                         }
                         if HAS_XGB:
                             models["XGBoost"] = xgb.XGBClassifier(random_state=42, eval_metric='logloss', verbosity=0)
@@ -1013,29 +1341,31 @@ else:
                     else:
                         models = {
                             "Linear Regression": LinearRegression(),
-                            "Ridge": Ridge(random_state=42),
-                            "Lasso": Lasso(random_state=42),
+                            "Ridge Regression": Ridge(random_state=42),
+                            "Lasso Regression": Lasso(random_state=42),
                             "Decision Tree": DecisionTreeRegressor(random_state=42),
-                            "Random Forest": RandomForestRegressor(random_state=42),
+                            "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
                             "Gradient Boosting": GradientBoostingRegressor(random_state=42),
                         }
                         if HAS_XGB:
                             models["XGBoost"] = xgb.XGBRegressor(random_state=42, verbosity=0)
                         scoring = 'r2'
-                    
-                    # Train & Evaluate (Section 21-22)
+
+                    # Train & Evaluate
                     results = []
                     best_score = -np.inf
                     best_model = None
                     best_name = ""
-                    
-                    progress = st.progress(0)
+
+                    progress = st.progress(0, text="Training models...")
+                    status = st.empty()
                     for i, (name, model) in enumerate(models.items()):
+                        status.caption(f"Training {name}...")
                         try:
-                            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, scoring=scoring)
+                            cv_scores = cross_val_score(model, X_train, y_train, cv=min(cv_folds, len(X_train)), scoring=scoring)
                             model.fit(X_train, y_train)
                             preds = model.predict(X_test)
-                            
+
                             if is_class:
                                 acc = accuracy_score(y_test, preds)
                                 prec = precision_score(y_test, preds, average='weighted', zero_division=0)
@@ -1058,42 +1388,73 @@ else:
                                     "CV Mean": f"{cv_scores.mean():.4f}", "CV Std": f"{cv_scores.std():.4f}",
                                     "_score": r2
                                 })
-                            
+
                             if results[-1]["_score"] > best_score:
                                 best_score = results[-1]["_score"]
                                 best_model = model
                                 best_name = name
                         except Exception as e:
-                            st.warning(f"⚠️ {name} failed: {e}")
-                        
-                        progress.progress((i + 1) / len(models))
-                    
+                            st.warning(f"⚠️ {name} failed: {str(e)[:100]}")
+
+                        progress.progress((i + 1) / len(models), text=f"Trained {i + 1}/{len(models)} models")
+
+                    status.empty()
+                    progress.empty()
+
                     # Leaderboard
                     if results:
-                        st.subheader("🏆 Model Leaderboard")
+                        # Winner announcement
+                        metric_name = 'Accuracy' if is_class else 'R²'
+                        st.markdown(f"""<div class='lb-winner'>
+                            <div class='lb-winner-title'>🏆 Best Model</div>
+                            <div class='lb-winner-name'>{best_name}</div>
+                            <div class='lb-winner-score'>{metric_name}: {best_score:.4f}</div>
+                        </div>""", unsafe_allow_html=True)
+
+                        st.markdown("<br>", unsafe_allow_html=True)
+
+                        render_section_header("📊", "Model Leaderboard", f"{len(results)} models")
                         lb = pd.DataFrame(results).sort_values("_score", ascending=False).drop("_score", axis=1)
                         st.dataframe(lb, use_container_width=True, hide_index=True)
-                        
-                        st.success(f"🥇 **Best Model: {best_name}** — {'Accuracy' if is_class else 'R²'}: {best_score:.4f}")
-                        
+
+                        # Comparison chart
+                        score_col = "Accuracy" if is_class else "R²"
+                        chart_df = lb[["Model", score_col]].copy()
+                        chart_df[score_col] = chart_df[score_col].astype(float)
+                        fig = px.bar(chart_df, x="Model", y=score_col,
+                            title=f"Model Comparison — {score_col}",
+                            color=score_col,
+                            color_continuous_scale="Viridis",
+                            template="plotly_dark")
+                        fig.update_layout(
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            font=dict(family="Inter"),
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
                         # Save best model
                         st.session_state.trained_model = best_model
                         st.session_state.model_info = {
-                            "name": best_name, "features": features,
+                            "name": best_name, "features": list(X.columns),
                             "label_encoders": label_encoders, "target_le": target_le,
                             "target": target, "is_class": is_class,
                             "X_test": X_test, "y_test": y_test
                         }
-                        
-                        # Confusion Matrix / Residuals (Section 21)
+
+                        # Confusion Matrix / Residuals
                         preds = best_model.predict(X_test)
                         if is_class:
                             cm_col1, cm_col2 = st.columns(2)
                             with cm_col1:
-                                st.subheader("Confusion Matrix")
+                                st.markdown("#### Confusion Matrix")
                                 cm = confusion_matrix(y_test, preds)
+                                labels = target_le.classes_ if target_le else None
                                 fig = px.imshow(cm, text_auto=True, color_continuous_scale="Blues",
-                                    title=f"Confusion Matrix — {best_name}")
+                                    title=f"Confusion Matrix — {best_name}",
+                                    x=labels, y=labels, template="plotly_dark")
+                                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
                                 st.plotly_chart(fig, use_container_width=True)
                             with cm_col2:
                                 # ROC Curve
@@ -1103,24 +1464,44 @@ else:
                                         if proba.shape[1] == 2:
                                             fpr, tpr, _ = roc_curve(y_test, proba[:, 1])
                                             auc = roc_auc_score(y_test, proba[:, 1])
-                                            fig = px.area(x=fpr, y=tpr, title=f"ROC Curve (AUC={auc:.3f})",
-                                                labels={'x': 'FPR', 'y': 'TPR'})
+                                            st.markdown("#### ROC Curve")
+                                            fig = px.area(x=fpr, y=tpr,
+                                                title=f"ROC Curve (AUC = {auc:.3f})",
+                                                labels={'x': 'False Positive Rate', 'y': 'True Positive Rate'},
+                                                template="plotly_dark")
                                             fig.add_shape(type='line', x0=0, x1=1, y0=0, y1=1,
                                                 line=dict(dash='dash', color='gray'))
+                                            fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
                                             st.plotly_chart(fig, use_container_width=True)
-                                except:
-                                    pass
+                                except Exception as e:
+                                    st.caption(f"ROC curve unavailable: {str(e)[:50]}")
                         else:
-                            st.subheader("Actual vs Predicted")
-                            fig = px.scatter(x=y_test, y=preds, labels={'x': 'Actual', 'y': 'Predicted'},
-                                title=f"Actual vs Predicted — {best_name}",
-                                color_discrete_sequence=["#818cf8"])
-                            fig.add_shape(type='line', x0=min(y_test), x1=max(y_test),
-                                y0=min(y_test), y1=max(y_test), line=dict(dash='dash', color='red'))
-                            st.plotly_chart(fig, use_container_width=True)
-                        
-                        # Feature Importance / SHAP (Section 23)
-                        st.subheader("🔍 Feature Importance (SHAP)")
+                            res_col1, res_col2 = st.columns(2)
+                            with res_col1:
+                                st.markdown("#### Actual vs Predicted")
+                                fig = px.scatter(x=y_test, y=preds,
+                                    labels={'x': 'Actual', 'y': 'Predicted'},
+                                    title=f"Actual vs Predicted — {best_name}",
+                                    color_discrete_sequence=["#818cf8"],
+                                    template="plotly_dark")
+                                fig.add_shape(type='line',
+                                    x0=min(y_test), x1=max(y_test),
+                                    y0=min(y_test), y1=max(y_test),
+                                    line=dict(dash='dash', color='#f87171'))
+                                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                                st.plotly_chart(fig, use_container_width=True)
+                            with res_col2:
+                                st.markdown("#### Residual Distribution")
+                                residuals = y_test - preds
+                                fig = px.histogram(x=residuals, title="Residual Distribution",
+                                    labels={'x': 'Residual'},
+                                    color_discrete_sequence=["#34d399"],
+                                    template="plotly_dark")
+                                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                                st.plotly_chart(fig, use_container_width=True)
+
+                        # Feature Importance / SHAP
+                        render_section_header("🔍", "Feature Importance", "Explainability")
                         try:
                             import shap
                             import matplotlib
@@ -1128,189 +1509,335 @@ else:
                             import matplotlib.pyplot as plt
                             explainer = shap.TreeExplainer(best_model)
                             shap_values = explainer.shap_values(X_test)
-                            fig, ax = plt.subplots(figsize=(8, 5))
+                            fig, ax = plt.subplots(figsize=(10, 6))
                             if is_class and isinstance(shap_values, list):
-                                shap.summary_plot(shap_values[1], X_test, show=False)
+                                shap.summary_plot(shap_values[1] if len(shap_values) > 1 else shap_values[0], X_test, show=False)
                             else:
                                 shap.summary_plot(shap_values, X_test, show=False)
                             st.pyplot(fig)
-                        except:
+                            plt.close(fig)
+                        except Exception:
                             # Fallback: built-in feature importance
                             if hasattr(best_model, 'feature_importances_'):
+                                feat_names = list(X.columns)
+                                importances = best_model.feature_importances_
+                                # Ensure lengths match
+                                n = min(len(feat_names), len(importances))
                                 imp = pd.DataFrame({
-                                    'Feature': features, 
-                                    'Importance': best_model.feature_importances_
+                                    'Feature': feat_names[:n],
+                                    'Importance': importances[:n]
                                 }).sort_values('Importance', ascending=True)
                                 fig = px.bar(imp, x='Importance', y='Feature', orientation='h',
-                                    title="Feature Importance", color_discrete_sequence=["#818cf8"])
+                                    title="Feature Importance",
+                                    color='Importance',
+                                    color_continuous_scale="Viridis",
+                                    template="plotly_dark")
+                                fig.update_layout(
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    font=dict(family="Inter"),
+                                    showlegend=False
+                                )
                                 st.plotly_chart(fig, use_container_width=True)
+                            elif hasattr(best_model, 'coef_'):
+                                feat_names = list(X.columns)
+                                coefs = best_model.coef_.flatten() if best_model.coef_.ndim > 1 else best_model.coef_
+                                n = min(len(feat_names), len(coefs))
+                                imp = pd.DataFrame({
+                                    'Feature': feat_names[:n],
+                                    'Coefficient': np.abs(coefs[:n])
+                                }).sort_values('Coefficient', ascending=True)
+                                fig = px.bar(imp, x='Coefficient', y='Feature', orientation='h',
+                                    title="Feature Coefficients (Absolute)",
+                                    color='Coefficient',
+                                    color_continuous_scale="Viridis",
+                                    template="plotly_dark")
+                                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"), showlegend=False)
+                                st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                st.info("Feature importance is not available for this model type.")
                 else:
-                    st.error("Not enough data after dropping missing values.")
+                    st.error("Not enough data (need >10 rows) after dropping missing values. Try cleaning your data first.")
 
     # ═══════════════════════════════════
-    # TAB 6: PREDICTION PLAYGROUND (Section 24)
+    # TAB 6: PREDICTION PLAYGROUND
     # ═══════════════════════════════════
-    with tabs[5]:
-        st.header("🔮 Prediction Playground")
-        
+    if active_workspace == "Predict":
+        render_section_header("🔮", "Prediction Playground", "Inference")
+
         if st.session_state.trained_model is None:
-            st.info("👆 Train a model in the AutoML tab first, then come here to make predictions!")
+            st.markdown("""<div class='empty-state'>
+                <span class='es-icon'>🤖</span>
+                <div class='es-title'>No Model Trained Yet</div>
+                <div class='es-desc'>Head over to the AutoML tab to train models first. Once trained, you can make predictions here with custom inputs!</div>
+            </div>""", unsafe_allow_html=True)
         else:
             info = st.session_state.model_info
-            st.success(f"Using trained **{info['name']}** model on target: **{info['target']}**")
-            
-            st.subheader("Enter Feature Values")
+            st.markdown(f"""<div class='insight-card insight-success'>
+                <strong>✅ Model Ready:</strong> Using <b>{safe_html_text(info['name'])}</b> trained on target <b>{safe_html_text(info['target'])}</b>
+                ({'Classification' if info['is_class'] else 'Regression'})
+            </div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Enter Feature Values")
             input_data = {}
             cols_per_row = 3
             feature_list = info['features']
             for i in range(0, len(feature_list), cols_per_row):
                 row_cols = st.columns(cols_per_row)
-                for j, col_name in enumerate(feature_list[i:i+cols_per_row]):
+                for j, col_name in enumerate(feature_list[i:i + cols_per_row]):
                     with row_cols[j]:
                         if col_name in info['label_encoders']:
                             le = info['label_encoders'][col_name]
                             options = list(le.classes_)
-                            val = st.selectbox(col_name, options, key=f"pred_{col_name}")
+                            val = st.selectbox(f"🏷️ {col_name}", options, key=f"pred_{col_name}")
                             input_data[col_name] = le.transform([val])[0]
                         else:
-                            default = float(df[col_name].median()) if pd.api.types.is_numeric_dtype(df[col_name]) else 0.0
-                            input_data[col_name] = st.number_input(col_name, value=default, key=f"pred_{col_name}")
-            
-            if st.button("🎯 Predict", use_container_width=True):
-                input_df = pd.DataFrame([input_data])
-                pred = st.session_state.trained_model.predict(input_df)[0]
-                
-                if info['is_class'] and info['target_le']:
-                    pred_label = info['target_le'].inverse_transform([int(pred)])[0]
-                    st.markdown(f"### Prediction: **{pred_label}**")
-                    
-                    if hasattr(st.session_state.trained_model, 'predict_proba'):
-                        proba = st.session_state.trained_model.predict_proba(input_df)[0]
-                        classes = info['target_le'].classes_ if info['target_le'] else range(len(proba))
-                        prob_df = pd.DataFrame({'Class': classes, 'Probability': proba})
-                        fig = px.bar(prob_df, x='Class', y='Probability', title="Prediction Confidence",
-                            color_discrete_sequence=["#818cf8"])
-                        st.plotly_chart(fig, use_container_width=True)
+                            default_val = 0.0
+                            try:
+                                if col_name in df.columns and pd.api.types.is_numeric_dtype(df[col_name]):
+                                    med = df[col_name].median()
+                                    if pd.notna(med) and np.isfinite(med):
+                                        default_val = float(med)
+                            except Exception:
+                                pass
+                            input_data[col_name] = st.number_input(f"🔢 {col_name}", value=default_val, key=f"pred_{col_name}")
+
+            if st.button("🎯 Make Prediction", use_container_width=True, type="primary", key="btn_predict"):
+                try:
+                    input_df = pd.DataFrame([input_data])
+                    pred = st.session_state.trained_model.predict(input_df)[0]
+
+                    if info['is_class'] and info.get('target_le') is not None:
+                        pred_label = info['target_le'].inverse_transform([int(pred)])[0]
+                        st.markdown(f"""<div class='lb-winner'>
+                            <div class='lb-winner-title'>Prediction Result</div>
+                            <div class='lb-winner-name'>{safe_html_text(pred_label)}</div>
+                        </div>""", unsafe_allow_html=True)
+
+                        if hasattr(st.session_state.trained_model, 'predict_proba'):
+                            proba = st.session_state.trained_model.predict_proba(input_df)[0]
+                            classes = info['target_le'].classes_ if info.get('target_le') else [f"Class {i}" for i in range(len(proba))]
+                            prob_df = pd.DataFrame({'Class': classes, 'Probability': proba})
+                            prob_df = prob_df.sort_values('Probability', ascending=True)
+                            fig = px.bar(prob_df, x='Probability', y='Class', orientation='h',
+                                title="Prediction Confidence",
+                                color='Probability',
+                                color_continuous_scale="Viridis",
+                                template="plotly_dark")
+                            fig.update_layout(
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                font=dict(family="Inter"),
+                                showlegend=False
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                    elif info['is_class']:
+                        # Classification but no label encoder
+                        st.markdown(f"""<div class='lb-winner'>
+                            <div class='lb-winner-title'>Prediction Result</div>
+                            <div class='lb-winner-name'>{safe_html_text(pred)}</div>
+                        </div>""", unsafe_allow_html=True)
+                    else:
+                        # Regression
+                        st.markdown(f"""<div class='lb-winner'>
+                            <div class='lb-winner-title'>Predicted Value</div>
+                            <div class='lb-winner-name'>{pred:.4f}</div>
+                        </div>""", unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Prediction failed: {e}")
+
+    # ═══════════════════════════════════
+    # TAB 7: ANOMALY DETECTION
+    # ═══════════════════════════════════
+    if active_workspace == "Anomalies":
+        render_section_header("🔍", "Anomaly & Outlier Detection", "Detect")
+
+        if len(num_cols_list) == 0:
+            st.markdown("""<div class='empty-state'>
+                <span class='es-icon'>🔢</span>
+                <div class='es-title'>No Numerical Columns</div>
+                <div class='es-desc'>Anomaly detection requires numerical columns. Try converting some columns to numeric in the Cleaning tab.</div>
+            </div>""", unsafe_allow_html=True)
+        else:
+            method = st.selectbox("Detection Method", [
+                "IQR (Interquartile Range)",
+                "Z-Score",
+                "Isolation Forest (Multivariate)"
+            ], key="anomaly_method")
+
+            if method == "IQR (Interquartile Range)":
+                col = st.selectbox("Column", num_cols_list, key="iqr_col")
+                if st.button("🔍 Detect IQR Outliers", key="btn_iqr"):
+                    Q1 = df[col].quantile(0.25)
+                    Q3 = df[col].quantile(0.75)
+                    IQR_val = Q3 - Q1
+                    outlier_mask = (df[col] < Q1 - 1.5 * IQR_val) | (df[col] > Q3 + 1.5 * IQR_val)
+                    outlier_count = int(outlier_mask.sum())
+
+                    st.markdown(f"""<div class='insight-card insight-warning'>
+                        <strong>⚠️ Outliers Found:</strong> <b>{outlier_count:,}</b> outliers detected ({outlier_count / max(len(df), 1) * 100:.1f}% of data)
+                    </div>""", unsafe_allow_html=True)
+
+                    box_df = df[[col]].sample(n=10_000, random_state=42) if len(df) > 10_000 else df[[col]]
+                    fig = px.box(box_df, y=col, title=f"Box Plot — {col} (sampled for display)", points="outliers",
+                        color_discrete_sequence=["#fb7185"], template="plotly_dark")
+                    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    if outlier_count > 0:
+                        st.dataframe(df.loc[outlier_mask].head(100), use_container_width=True)
+
+            elif method == "Z-Score":
+                col = st.selectbox("Column", num_cols_list, key="zscore_col")
+                threshold = st.slider("Z-Score Threshold", 2.0, 4.0, 3.0, 0.1, key="z_threshold")
+                if st.button("🔍 Detect Z-Score Outliers", key="btn_zscore"):
+                    col_data = df[col].dropna()
+                    if len(col_data) > 100_000:
+                        col_data = col_data.sample(n=100_000, random_state=42)
+                        st.info("Z-Score is evaluated on a fixed 100,000-row sample for this large dataset.")
+                    z = np.abs(stats.zscore(col_data))
+                    outlier_mask = z > threshold
+                    outlier_indices = col_data.index[outlier_mask]
+                    outliers = df.loc[outlier_indices]
+
+                    st.markdown(f"""<div class='insight-card insight-warning'>
+                        <strong>⚠️ Outliers Found:</strong> <b>{len(outliers):,}</b> outliers detected in {len(col_data):,} evaluated rows ({len(outliers) / max(len(col_data), 1) * 100:.1f}% of evaluated data)
+                    </div>""", unsafe_allow_html=True)
+
+                    if len(outliers) > 0:
+                        st.dataframe(outliers.head(100), use_container_width=True)
+
+            elif method == "Isolation Forest (Multivariate)":
+                if len(num_cols_list) >= 2:
+                    iso_cols = st.multiselect("Select Columns", num_cols_list,
+                        default=num_cols_list[:min(4, len(num_cols_list))], key="iso_cols")
+                    contamination = st.slider("Contamination Rate", 0.01, 0.15, 0.05, key="iso_contam")
+                    if st.button("🔍 Run Isolation Forest", key="btn_isoforest") and len(iso_cols) >= 2:
+                        clean_data = df[iso_cols].dropna()
+                        if len(clean_data) > 20_000:
+                            clean_data = clean_data.sample(n=20_000, random_state=42)
+                            st.info("Isolation Forest is fitted on a fixed 20,000-row sample to keep memory and runtime predictable.")
+                        if len(clean_data) > 10:
+                            iso = IsolationForest(contamination=contamination, random_state=42, n_jobs=-1)
+                            iso_preds = iso.fit_predict(clean_data)
+                            clean_data = clean_data.copy()
+                            clean_data['Anomaly'] = ['🔴 Anomaly' if p == -1 else '🟢 Normal' for p in iso_preds]
+                            anomalies = clean_data[clean_data['Anomaly'] == '🔴 Anomaly']
+
+                            st.markdown(f"""<div class='insight-card insight-warning'>
+                                <strong>⚠️ Anomalies Found:</strong> <b>{len(anomalies)}</b> anomalies detected ({len(anomalies) / len(clean_data) * 100:.1f}% of data)
+                            </div>""", unsafe_allow_html=True)
+
+                            fig = px.scatter(clean_data, x=iso_cols[0], y=iso_cols[1], color='Anomaly',
+                                color_discrete_map={'🟢 Normal': '#34d399', '🔴 Anomaly': '#fb7185'},
+                                title="Anomaly Detection Scatter Plot",
+                                template="plotly_dark")
+                            fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Inter"))
+                            st.plotly_chart(fig, use_container_width=True)
+
+                            if len(anomalies) > 0:
+                                st.dataframe(anomalies.drop('Anomaly', axis=1).head(100), use_container_width=True)
+                        else:
+                            st.error("Not enough data after removing missing values.")
                 else:
-                    st.markdown(f"### Predicted Value: **{pred:.4f}**")
+                    st.info("Need at least 2 numerical columns for Isolation Forest.")
 
     # ═══════════════════════════════════
-    # TAB 7: ANOMALY DETECTION (Sections 11, 25)
+    # TAB 8: AI INSIGHTS
     # ═══════════════════════════════════
-    with tabs[6]:
-        st.header("Anomaly & Outlier Detection")
-        
-        method = st.selectbox("Detection Method", ["IQR (Interquartile Range)", "Z-Score", "Isolation Forest (Multivariate)"])
-        
-        if method == "IQR (Interquartile Range)":
-            col = st.selectbox("Column", num_cols_list, key="iqr_col")
-            if st.button("Detect IQR Outliers"):
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                outliers = df[(df[col] < Q1 - 1.5*IQR) | (df[col] > Q3 + 1.5*IQR)]
-                st.error(f"Found **{len(outliers)}** outliers ({len(outliers)/len(df)*100:.1f}%)")
-                
-                fig = px.box(df, y=col, title=f"Box Plot with Outliers — {col}", points="outliers",
-                    color_discrete_sequence=["#f87171"])
-                st.plotly_chart(fig, use_container_width=True)
-                st.dataframe(outliers, use_container_width=True)
-                
-        elif method == "Z-Score":
-            col = st.selectbox("Column", num_cols_list, key="zscore_col")
-            threshold = st.slider("Z-Score Threshold", 2.0, 4.0, 3.0, 0.1)
-            if st.button("Detect Z-Score Outliers"):
-                z = np.abs(stats.zscore(df[col].dropna()))
-                outlier_mask = z > threshold
-                outliers = df.loc[df[col].dropna().index[outlier_mask]]
-                st.error(f"Found **{len(outliers)}** outliers ({len(outliers)/len(df)*100:.1f}%)")
-                st.dataframe(outliers, use_container_width=True)
-                
-        elif method == "Isolation Forest (Multivariate)":
-            if len(num_cols_list) >= 2:
-                iso_cols = st.multiselect("Select Columns", num_cols_list, default=num_cols_list[:min(4, len(num_cols_list))], key="iso_cols")
-                contamination = st.slider("Contamination", 0.01, 0.15, 0.05)
-                if st.button("Run Isolation Forest") and len(iso_cols) >= 2:
-                    clean = df[iso_cols].dropna()
-                    iso = IsolationForest(contamination=contamination, random_state=42)
-                    preds = iso.fit_predict(clean)
-                    clean['Anomaly'] = ['Anomaly' if p == -1 else 'Normal' for p in preds]
-                    anomalies = clean[clean['Anomaly'] == 'Anomaly']
-                    st.error(f"Found **{len(anomalies)}** anomalies ({len(anomalies)/len(clean)*100:.1f}%)")
-                    
-                    if len(iso_cols) >= 2:
-                        fig = px.scatter(clean, x=iso_cols[0], y=iso_cols[1], color='Anomaly',
-                            color_discrete_map={'Normal': '#34d399', 'Anomaly': '#f87171'},
-                            title="Anomaly Scatter Plot")
-                        st.plotly_chart(fig, use_container_width=True)
-                    st.dataframe(anomalies.drop('Anomaly', axis=1), use_container_width=True)
-            else:
-                st.info("Need at least 2 numerical columns for Isolation Forest.")
+    if active_workspace == "Insights":
+        render_section_header("💡", "AI-Generated Insights & Recommendations", "Intelligence")
 
-    # ═══════════════════════════════════
-    # TAB 8: AI INSIGHTS (Section 28)
-    # ═══════════════════════════════════
-    with tabs[7]:
-        st.header("💡 AI-Generated Insights & Recommendations")
-        
         insights = []
-        
-        # Data Quality Insights
+
+        # Data Quality
         q = compute_quality_score(df)
         if q < 60:
-            insights.append(("🔴", "Critical Data Quality Issue", f"Data quality score is only {q}/100. Heavy cleaning is needed before analysis."))
+            insights.append(("danger", "🔴", "Critical Data Quality Issue", f"Data quality score is only {q}/100. Heavy cleaning is needed before reliable analysis. Focus on missing values and duplicates first."))
         elif q < 80:
-            insights.append(("🟡", "Moderate Data Quality", f"Data quality score is {q}/100. Some cleaning recommended."))
+            insights.append(("warning", "🟡", "Moderate Data Quality", f"Data quality score is {q}/100. Some cleaning is recommended for better analysis results."))
         else:
-            insights.append(("🟢", "Good Data Quality", f"Data quality score is {q}/100. Dataset is in good shape!"))
-        
+            insights.append(("success", "🟢", "Excellent Data Quality", f"Data quality score is {q}/100. Your dataset is in great shape for analysis!"))
+
         # Missing value insights
         missing_cols = df.columns[df.isnull().any()].tolist()
         if missing_cols:
             worst = df[missing_cols].isnull().sum().idxmax()
             worst_pct = df[worst].isnull().sum() / len(df) * 100
-            insights.append(("⚠️", "Missing Values", f"'{worst}' has the most missing values ({worst_pct:.1f}%). Consider imputation or dropping."))
-        
+            insights.append(("warning", "⚠️", "Missing Values Detected",
+                f"Column '{worst}' has the most missing values ({worst_pct:.1f}%). "
+                f"{'Consider dropping this column if >50% missing.' if worst_pct > 50 else 'Use mean/median imputation for numerical, mode for categorical.'}"))
+
         # Correlation insights
         if len(num_cols_list) >= 2:
             corr = df[num_cols_list].corr()
+            high_corr_pairs = []
             for i in range(len(corr.columns)):
-                for j in range(i+1, len(corr.columns)):
+                for j in range(i + 1, len(corr.columns)):
                     val = corr.iloc[i, j]
                     if abs(val) > 0.85:
-                        insights.append(("🔗", "High Correlation", f"'{corr.columns[i]}' and '{corr.columns[j]}' are highly correlated (r={val:.2f}). Consider removing one to reduce multicollinearity."))
-        
-        # Skewness insights
+                        high_corr_pairs.append((corr.columns[i], corr.columns[j], val))
+            if high_corr_pairs:
+                pairs_str = "; ".join([f"'{a}' ↔ '{b}' (r={v:.2f})" for a, b, v in high_corr_pairs[:3]])
+                insights.append(("warning", "🔗", "High Multicollinearity",
+                    f"{len(high_corr_pairs)} highly correlated pairs found: {pairs_str}. Consider removing redundant features to improve model stability."))
+
+        # Skewness
+        skewed_cols = []
         for col in num_cols_list:
-            skew = df[col].skew()
-            if abs(skew) > 2:
-                insights.append(("📐", "Extreme Skewness", f"'{col}' is extremely skewed (skew={skew:.2f}). Apply log/sqrt transformation."))
-        
-        # Class imbalance (Section 36)
-        potential_targets = [c for c in df.columns if df[c].nunique() < 10 and df[c].nunique() > 1]
+            try:
+                skew = df[col].skew()
+                if abs(skew) > 2:
+                    skewed_cols.append((col, skew))
+            except Exception:
+                pass
+        if skewed_cols:
+            cols_str = ", ".join([f"'{c}' (skew={s:.1f})" for c, s in skewed_cols[:3]])
+            insights.append(("", "📐", "Extreme Skewness", f"Columns with extreme skewness: {cols_str}. Apply log, sqrt, or Box-Cox transformation."))
+
+        # Class imbalance
+        potential_targets = [c for c in df.columns if 1 < df[c].nunique() <= 10]
         for col in potential_targets[:3]:
             vc = df[col].value_counts(normalize=True)
             if vc.min() < 0.1:
-                insights.append(("⚖️", "Class Imbalance", f"'{col}' has severe class imbalance (minority class: {vc.min()*100:.1f}%). Consider SMOTE or class weights."))
-        
+                insights.append(("warning", "⚖️", "Class Imbalance",
+                    f"Column '{col}' has severe class imbalance (minority: {vc.min() * 100:.1f}%). Consider SMOTE, class weights, or stratified sampling."))
+
         # Constant columns
         const_cols = [c for c in df.columns if df[c].nunique() <= 1]
         if const_cols:
-            insights.append(("🗑️", "Constant Columns", f"Columns {const_cols} have only 1 unique value and provide no information. Drop them."))
-        
+            insights.append(("danger", "🗑️", "Zero-Variance Columns",
+                f"Columns with only 1 unique value: {', '.join(const_cols)}. These provide no information and should be dropped."))
+
+        # High cardinality
+        for col in cat_cols_list:
+            if df[col].nunique() > 50:
+                insights.append(("", "🏷️", "High Cardinality",
+                    f"Column '{col}' has {df[col].nunique()} unique categories. Consider grouping rare categories or using target encoding for ML."))
+                break  # Only show once
+
+        # Dataset size
+        if len(df) < 100:
+            insights.append(("warning", "📉", "Small Dataset",
+                "Dataset has fewer than 100 rows. Statistical tests and ML models may not be reliable. Collect more data if possible."))
+        elif len(df) > 100000:
+            insights.append(("", "📈", "Large Dataset",
+                f"Dataset has {len(df):,} rows. Consider sampling for initial EDA. Models will benefit from the large training set."))
+
         # Display insights
-        for icon, title, desc in insights:
-            st.markdown(f"""<div class='insight-card'>
-                <strong>{icon} {title}</strong><br>{desc}
-            </div>""", unsafe_allow_html=True)
-        
-        if not insights:
+        if insights:
+            for cls, icon, title, desc in insights:
+                card_cls = f"insight-{cls}" if cls else ""
+                st.markdown(f"""<div class='insight-card {card_cls}'>
+                    <strong>{icon} {safe_html_text(title)}</strong><br>{safe_html_text(desc)}
+                </div>""", unsafe_allow_html=True)
+        else:
             st.success("✅ No significant issues detected. Your dataset looks great!")
 
     # ═══════════════════════════════════
-    # TAB 9: AI CHATBOT (Section 27)
+    # TAB 9: AI CHATBOT
     # ═══════════════════════════════════
-    with tabs[8]:
+    if active_workspace == "AI Chat":
         st.markdown("""<div class='chat-hero'>
             <div class='chat-hero-icon'>✦</div>
             <div class='chat-hero-copy'>
@@ -1320,13 +1847,13 @@ else:
             </div>
             <span class='chat-model-chip'>● LLAMA 3.2</span>
         </div>""", unsafe_allow_html=True)
-        
+
         import requests as req
         import json
-        
+
         OLLAMA_URL = "http://localhost:11434"
         MODEL_NAME = "llama3.2"
-        
+
         def get_models():
             try:
                 r = req.get(f"{OLLAMA_URL}/api/tags", timeout=3)
@@ -1335,18 +1862,18 @@ else:
             except Exception:
                 return None
             return None
-        
-        # One local request gives both server status and installed model names.
-        models = get_models()
-        ollama_ok = models is not None
-        models = models or []
-        
+
+        # One local request gives both server status and the installed model list.
+        models_list = get_models()
+        ollama_ok = models_list is not None
+        models_list = models_list or []
+
         if not ollama_ok:
             st.markdown("""<div class='chat-status chat-status-offline'>
                 <strong>Ollama is offline.</strong> Start Ollama to enable local chat.
             </div>""", unsafe_allow_html=True)
-            st.code("ollama serve\n# Then in another tab:\nollama pull llama3.2", language="bash")
-        elif MODEL_NAME not in [m.split(":")[0] for m in models]:
+            st.code("ollama serve\n# Then in another terminal tab:\nollama pull llama3.2", language="bash")
+        elif MODEL_NAME not in [m.split(":")[0] for m in models_list]:
             st.markdown(f"""<div class='chat-status chat-status-warn'>
                 <strong>{MODEL_NAME} is not installed.</strong> Add it with <code>ollama pull {MODEL_NAME}</code>.
             </div>""", unsafe_allow_html=True)
@@ -1354,15 +1881,15 @@ else:
             st.markdown(f"""<div class='chat-status chat-status-ready'>
                 <strong>Ready to chat</strong> · {MODEL_NAME} is running locally. Your dataset stays on this device.
             </div>""", unsafe_allow_html=True)
-            
+
             chat_container = st.container()
-            
+
             with chat_container:
                 if len(st.session_state.messages) == 0:
                     st.markdown("""<div class='chat-welcome'>
                         <span class='chat-welcome-icon'>🤖</span>
-                        <div style='font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;'>Ask me about your data</div>
-                        <div style='font-size: 0.88rem; color: var(--text-muted);'>Try “What is the average age?” or “Which column has the most missing values?”</div>
+                        <div style='font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;'>Ask me anything about your data!</div>
+                        <div style='font-size: 0.85rem; color: var(--text-muted);'>Try: "What is the average age?" or "Which column has the most missing values?"</div>
                     </div>""", unsafe_allow_html=True)
                 for msg in st.session_state.messages:
                     avatar = "🧑‍💻" if msg["role"] == "user" else "🤖"
@@ -1375,37 +1902,30 @@ else:
                 with chat_container:
                     with st.chat_message("user", avatar="🧑‍💻"):
                         st.write(prompt)
-                        
-                    with st.chat_message("assistant", avatar="🤖"):
-                        # Format stats dynamically for both numeric and categorical columns
-                        stats_text = []
-                        for col in df.columns:
-                            if pd.api.types.is_numeric_dtype(df[col]):
-                                stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Median={df[col].median():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}, Skewness={df[col].skew():.2f}")
-                            else:
-                                vc = df[col].value_counts().to_dict()
-                                vc_str = ", ".join([f"{str(k)}: {v}" for k, v in list(vc.items())[:5]])
-                                stats_text.append(f"- '{col}' (Categorical/Text): {vc_str}")
-                        
-                        missing_stats = ", ".join([f"{col}: {df[col].isnull().sum()}" for col in df.columns if df[col].isnull().sum() > 0])
-                        if not missing_stats: missing_stats = "None"
-                        
-                        system = f"""You are a strict, factual Data Assistant. 
-You must ONLY use the exact statistics provided below to answer the question.
-DO NOT perform any calculations. DO NOT guess.
-If the answer is not in the data below, you MUST exactly say: "I cannot determine this from the summary."
-Keep your answer very short (1 sentence).
 
-DATASET STATISTICS:
-Rows: {df.shape[0]}
-Columns: {df.shape[1]}
-Missing values: {missing_stats}
-{chr(10).join(stats_text)}
+                    with st.chat_message("assistant", avatar="🤖"):
+                        dataset_summary = get_chat_data_summary(df)
+
+                        system = f"""You are a strict, factual Data Assistant.
+You must ONLY use the exact statistics provided below to answer the question.
+DO NOT perform any calculations. DO NOT guess or infer beyond the data.
+If the answer is not in the data below, say: "I cannot determine this from the available summary statistics."
+Keep your answer concise (2-3 sentences max). Use bullet points for multiple items.
+{dataset_summary["sampling_note"]}
+
+DATASET: {st.session_state.get('filename', 'Unknown')}
+Shape: {df.shape[0]} rows × {df.shape[1]} columns
+Missing values: {dataset_summary["missing"]}
+
+COLUMN STATISTICS:
+{dataset_summary["columns"]}
 """
-                        
-                        # We only pass the system prompt and the immediate user question to avoid small model context drift
-                        messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
-                        
+
+                        messages = [
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": prompt}
+                        ]
+
                         payload = {
                             "model": MODEL_NAME,
                             "messages": messages,
@@ -1415,20 +1935,31 @@ Missing values: {missing_stats}
                                 "top_p": 0.1
                             }
                         }
-                        
+
                         try:
                             container = st.empty()
-                            response = ""
+                            response_parts = []
+                            last_render = time.monotonic()
                             with req.post(f"{OLLAMA_URL}/api/chat", json=payload, stream=True, timeout=60) as r:
                                 for line in r.iter_lines():
                                     if line:
                                         chunk = json.loads(line)
                                         token = chunk.get("message", {}).get("content", "")
-                                        response += token
-                                        container.markdown(response + "▌")
+                                        if token:
+                                            response_parts.append(token)
+                                        now = time.monotonic()
+                                        if now - last_render >= 0.08 and response_parts:
+                                            container.markdown("".join(response_parts) + "▌")
+                                            last_render = now
                                         if chunk.get("done"):
                                             break
+                            response = "".join(response_parts)
                             container.markdown(response)
                             st.session_state.messages.append({"role": "assistant", "content": response})
+                            st.session_state.messages = st.session_state.messages[-40:]
+                        except req.exceptions.ConnectionError:
+                            st.error("Lost connection to Ollama. Is it still running?")
+                        except req.exceptions.Timeout:
+                            st.error("Request timed out. The model might be loading — try again.")
                         except Exception as e:
-                            st.error(f"Error: {e}")
+                            st.error(f"Error: {str(e)[:200]}")
