@@ -1172,20 +1172,20 @@ else:
                         st.write(prompt)
                         
                     with st.chat_message("assistant", avatar="🤖"):
-                    # Format stats dynamically for both numeric and categorical columns
-                    stats_text = []
-                    for col in df.columns:
-                        if pd.api.types.is_numeric_dtype(df[col]):
-                            stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Median={df[col].median():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}, Skewness={df[col].skew():.2f}")
-                        else:
-                            vc = df[col].value_counts().to_dict()
-                            vc_str = ", ".join([f"{str(k)}: {v}" for k, v in list(vc.items())[:5]])
-                            stats_text.append(f"- '{col}' (Categorical/Text): {vc_str}")
-                    
-                    missing_stats = ", ".join([f"{col}: {df[col].isnull().sum()}" for col in df.columns if df[col].isnull().sum() > 0])
-                    if not missing_stats: missing_stats = "None"
-                    
-                    system = f"""You are a strict, factual Data Assistant. 
+                        # Format stats dynamically for both numeric and categorical columns
+                        stats_text = []
+                        for col in df.columns:
+                            if pd.api.types.is_numeric_dtype(df[col]):
+                                stats_text.append(f"- '{col}' (Numeric): Average={df[col].mean():.2f}, Median={df[col].median():.2f}, Min={df[col].min():.2f}, Max={df[col].max():.2f}, Skewness={df[col].skew():.2f}")
+                            else:
+                                vc = df[col].value_counts().to_dict()
+                                vc_str = ", ".join([f"{str(k)}: {v}" for k, v in list(vc.items())[:5]])
+                                stats_text.append(f"- '{col}' (Categorical/Text): {vc_str}")
+                        
+                        missing_stats = ", ".join([f"{col}: {df[col].isnull().sum()}" for col in df.columns if df[col].isnull().sum() > 0])
+                        if not missing_stats: missing_stats = "None"
+                        
+                        system = f"""You are a strict, factual Data Assistant. 
 You must ONLY use the exact statistics provided below to answer the question.
 DO NOT perform any calculations. DO NOT guess.
 If the answer is not in the data below, you MUST exactly say: "I cannot determine this from the summary."
@@ -1197,33 +1197,33 @@ Columns: {df.shape[1]}
 Missing values: {missing_stats}
 {chr(10).join(stats_text)}
 """
-                    
-                    # We only pass the system prompt and the immediate user question to avoid small model context drift
-                    messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
-                    
-                    payload = {
-                        "model": MODEL_NAME,
-                        "messages": messages,
-                        "stream": True,
-                        "options": {
-                            "temperature": 0.0,
-                            "top_p": 0.1
+                        
+                        # We only pass the system prompt and the immediate user question to avoid small model context drift
+                        messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+                        
+                        payload = {
+                            "model": MODEL_NAME,
+                            "messages": messages,
+                            "stream": True,
+                            "options": {
+                                "temperature": 0.0,
+                                "top_p": 0.1
+                            }
                         }
-                    }
-                    
-                    try:
-                        container = st.empty()
-                        response = ""
-                        with req.post(f"{OLLAMA_URL}/api/chat", json=payload, stream=True, timeout=60) as r:
-                            for line in r.iter_lines():
-                                if line:
-                                    chunk = json.loads(line)
-                                    token = chunk.get("message", {}).get("content", "")
-                                    response += token
-                                    container.markdown(response + "▌")
-                                    if chunk.get("done"):
-                                        break
-                        container.markdown(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                        
+                        try:
+                            container = st.empty()
+                            response = ""
+                            with req.post(f"{OLLAMA_URL}/api/chat", json=payload, stream=True, timeout=60) as r:
+                                for line in r.iter_lines():
+                                    if line:
+                                        chunk = json.loads(line)
+                                        token = chunk.get("message", {}).get("content", "")
+                                        response += token
+                                        container.markdown(response + "▌")
+                                        if chunk.get("done"):
+                                            break
+                            container.markdown(response)
+                            st.session_state.messages.append({"role": "assistant", "content": response})
+                        except Exception as e:
+                            st.error(f"Error: {e}")
